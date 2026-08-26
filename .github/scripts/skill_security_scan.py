@@ -258,10 +258,14 @@ def scan_manifest(rep: Report, abspath: Path, path: str, allow: list[str]) -> No
 
 
 def discover(root: Path) -> tuple[list[Path], list[Path]]:
-    skills = root / "skills"
-    base = skills if skills.is_dir() else root
+    # Only skill content is the attack surface. Scope strictly to skills/ so the
+    # repo's own docs (CONTRIBUTING.md etc., which quote attack signatures as
+    # examples) are never scanned. No skills/ dir → nothing to scan.
+    base = root / "skills"
+    if not base.is_dir():
+        return [], []
     manifests = sorted(base.rglob("skill.yaml"))
-    bodies = sorted(p for p in base.rglob("*.md"))
+    bodies = sorted(base.rglob("*.md"))
     return manifests, bodies
 
 

