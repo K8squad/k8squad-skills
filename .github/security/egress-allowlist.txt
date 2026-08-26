@@ -1,0 +1,28 @@
+# Egress allowlist for skill bodies.
+# One host or parent domain per line; a URL host matches if it equals an entry
+# or is a subdomain of it. Lines after `#` are comments.
+#
+# The skill security scanner (.github/scripts/skill_security_scan.py) flags any
+# https?:// host in a skill body that is NOT covered here as a MEDIUM finding,
+# so a maintainer reviews new network destinations before merge.
+#
+# Add a host here ONLY after confirming the skill legitimately needs to reach it.
+
+# --- K8squad + project ---
+k8squad.io
+charts.k8squad.io
+
+# --- source hosting / package registries the skills reference ---
+github.com
+raw.githubusercontent.com
+api.github.com
+pkg.go.dev
+golang.org
+go.dev
+
+# --- vendors used by catalog skills ---
+dynatrace.com
+
+# --- upstream project docs commonly linked from skill bodies ---
+kubernetes.io
+apache.org
