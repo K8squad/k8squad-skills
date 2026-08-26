@@ -10,6 +10,11 @@ name: Skill PR checks
 #     kube-apiserver dry-run. They NEVER execute a skill payload.
 on:
   pull_request:
+    # `labeled` is required so applying the `skill-security-reviewed` sign-off
+    # label RE-RUNS this gate and flips the required check green (ISI-3276 F5).
+    # Still `pull_request` (never `pull_request_target`): a fork PR keeps a
+    # read-only token and no secrets regardless of type.
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - "skills/**"
       - "kustomization.yaml"

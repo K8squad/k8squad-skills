@@ -182,7 +182,10 @@ def host_allowed(host: str, allow: list[str]) -> bool:
     return any(host == a or host.endswith("." + a) for a in allow)
 
 
-URL_RX = re.compile(r"https?://([A-Za-z0-9._-]+)", re.IGNORECASE)
+# Capture the REAL host: skip any `userinfo@` authority prefix so
+# `https://raw.githubusercontent.com@evil.example/x` is scanned as evil.example,
+# not the allowlisted-looking userinfo. (ISI-3276 F1: userinfo egress bypass.)
+URL_RX = re.compile(r"https?://(?:[^/@\s]*@)?([A-Za-z0-9._-]+)", re.IGNORECASE)
 
 
 def scan_text(rep: Report, path: str, text: str, allow: list[str]) -> None:
@@ -261,6 +264,16 @@ def discover(root: Path) -> tuple[list[Path], list[Path]]:
     # Only skill content is the attack surface. Scope strictly to skills/ so the
     # repo's own docs (CONTRIBUTING.md etc., which quote attack signatures as
     # examples) are never scanned. No skills/ dir → nothing to scan.
+    #
+    # ponytail: KNOWN COVERAGE CEILING (ISI-3276 F2/F3/F4). This static scan sees
+    # ONLY the in-repo text: `source.inline` bodies + `skills/**/*.md`. It does
+    # NOT (a) fetch and scan a `source.git` remote body — a git-sourced skill's
+    # executed payload lives in another repo and is invisible here (F2); (b) catch
+    # two-step download-then-exec that fetches from an allowlisted user-content
+    # host like raw.githubusercontent.com (F3); (c) scan aux files (*.sh/*.py/…)
+    # dropped alongside skill.yaml (F4). These are covered by the human sign-off
+    # gate, NOT the scanner: git-sourced and privileged skills must get a
+    # maintainer's `skill-security-reviewed` label (see CONTRIBUTING.md).
     base = root / "skills"
     if not base.is_dir():
         return [], []
