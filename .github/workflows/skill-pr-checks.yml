@@ -1,0 +1,130 @@
+name: Skill PR checks
+
+# Untrusted-code safety (ISI-3275 scope §3):
+#   * Triggered by `pull_request` (NOT pull_request_target) so PRs from FORKS run
+#     with a read-only GITHUB_TOKEN and NO access to repository secrets.
+#   * Runs on GitHub-hosted `ubuntu-latest` — never a self-hosted runner — so a
+#     malicious fork PR cannot pivot onto org infrastructure (org runner-hardening
+#     posture, ISI-3223/3229).
+#   * The jobs treat every skill body as DATA: they parse YAML/markdown and run a
+#     kube-apiserver dry-run. They NEVER execute a skill payload.
+on:
+  pull_request:
+    # `labeled` is required so applying the `skill-security-reviewed` sign-off
+    # label RE-RUNS this gate and flips the required check green (ISI-3276 F5).
+    # Still `pull_request` (never `pull_request_target`): a fork PR keeps a
+    # read-only token and no secrets regardless of type.
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - "skills/**"
+      - "kustomization.yaml"
+      - ".github/workflows/skill-pr-checks.yml"
+      - ".github/scripts/**"
+      - ".github/security/**"
+
+# Least privilege. The security-review sign-off gate only needs to read PR labels.
+permissions:
+  contents: read
+
+concurrency:
+  group: skill-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # Canonical CRD source. Skills validate against the CRD as it exists on the
+  # main K8squad repo, so a contributor cannot pass CI against a stale schema.
+  CRD_REPO: K8squad/K8squad
+  CRD_REF: main
+  CRD_PATH: config/crd/bases/ksquad.io_skills.yaml
+
+jobs:
+  schema-validation:
+    name: CRD schema validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # kind gives us a real kube-apiserver so `apply --dry-run=server` enforces
+      # BOTH structural schema (unknown/misspelled fields via strict validation)
+      # AND the CRD's CEL x-kubernetes-validations (the inline⇔git consistency
+      # rule) — which a pure JSON-schema validator cannot evaluate.
+      - name: Create kind cluster
+        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+        with:
+          cluster_name: skill-validation
+
+      - name: Fetch and install the Skill CRD
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            "https://raw.githubusercontent.com/${CRD_REPO}/${CRD_REF}/${CRD_PATH}" \
+            -o /tmp/skill-crd.yaml
+          echo "::group::Skill CRD"
+          cat /tmp/skill-crd.yaml
+          echo "::endgroup::"
+          kubectl apply -f /tmp/skill-crd.yaml
+          kubectl wait --for=condition=Established crd/skills.ksquad.io --timeout=60s
+
+      - name: Validate every Skill (server dry-run, strict fields)
+        run: |
+          set -uo pipefail
+          fail=0
+          shopt -s globstar nullglob
+          files=(skills/**/skill.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No skills/**/skill.yaml found — nothing to validate."
+            exit 0
+          fi
+          for f in "${files[@]}"; do
+            echo "::group::validate $f"
+            if kubectl apply --dry-run=server --validate=true -f "$f"; then
+              echo "OK: $f"
+            else
+              echo "::error file=$f::Skill failed CRD schema/CEL validation (server dry-run)."
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+  security-scan:
+    name: Skill security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install parser dependency
+        run: pip install --quiet pyyaml==6.0.2
+
+      - name: Self-test the scanner
+        run: python3 .github/scripts/test_skill_security_scan.py
+
+      - name: Scan skills
+        id: scan
+        run: python3 .github/scripts/skill_security_scan.py .
+
+      - name: Block on HIGH-severity findings
+        if: steps.scan.outputs.high != '0'
+        run: |
+          echo "::error::${{ steps.scan.outputs.high }} HIGH-severity security finding(s). See annotations. This PR is blocked until they are removed."
+          exit 1
+
+      # MEDIUM findings do not auto-block, but they require a maintainer to review
+      # the flagged skill and apply the `skill-security-reviewed` label. Because
+      # this runs from `pull_request`, the label is read from the PR event payload
+      # (no privileged token needed).
+      - name: Require security sign-off for MEDIUM findings
+        if: steps.scan.outputs.medium != '0'
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          if [[ ",${LABELS}," == *",skill-security-reviewed,"* ]]; then
+            echo "MEDIUM findings acknowledged via 'skill-security-reviewed' label."
+          else
+            echo "::error::${{ steps.scan.outputs.medium }} MEDIUM-severity finding(s) require human security sign-off. A maintainer must review the flagged skill(s) and apply the 'skill-security-reviewed' label to merge."
+            exit 1
+          fi
