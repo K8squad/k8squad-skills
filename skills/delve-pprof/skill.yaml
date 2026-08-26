@@ -1,0 +1,27 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: delve-pprof
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: '# Delve + pprof
+
+
+      Live-process debugging with dlv and CPU/heap/goroutine profiling with
+
+      `go tool pprof`, against a running pod reached via kubectl port-forward.
+
+      Reach for this on the bugs that only reproduce in the cluster.
+
+      '
+  permissions:
+  - fs:read
+  - exec:dlv
+  - exec:go-tool-pprof
+  - k8s:port-forward
+  requires:
+    toolchains:
+    - go@1.25
+    - delve@1.24

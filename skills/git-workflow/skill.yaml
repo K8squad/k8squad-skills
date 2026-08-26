@@ -1,0 +1,19 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: git-workflow
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: "# Local git workflow\n\nLocal history + debugging tooling that the remote `github` skill\
+      \ does not\ncover: git bisect (regression hunting), blame, log -S / -G (pickaxe),\nworktree, and\
+      \ ordinary branch/commit. Reach for bisect the moment \"it used\nto work\" \u2014 it finds the offending\
+      \ commit in log2(n) steps.\n"
+  permissions:
+  - fs:read
+  - fs:write:workspace
+  - exec:git
+  requires:
+    toolchains:
+    - git@2.47

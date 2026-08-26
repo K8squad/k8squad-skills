@@ -1,0 +1,26 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: http-grpc-probe
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: '# HTTP / gRPC probe
+
+
+      curl / grpcurl to probe live service endpoints while debugging
+
+      service-to-service issues. Egress is gated to the cluster. Read-first:
+
+      prefer GET / reflection before any mutating call.
+
+      '
+  permissions:
+  - exec:curl
+  - exec:grpcurl
+  - net:egress:cluster
+  requires:
+    toolchains:
+    - curl@8
+    - grpcurl@1.9

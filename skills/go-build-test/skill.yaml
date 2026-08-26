@@ -1,0 +1,27 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: go-build-test
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: '# Go build & test
+
+
+      go build ./... / go vet ./... / go test (focused with -run, and -race for
+
+      concurrency bugs). Use the dockerd sidecar for the repo''s testcontainers /
+
+      CNPG integration suites. Keep the diff green before handing off.
+
+      '
+  permissions:
+  - fs:read
+  - fs:write:workspace
+  - exec:go
+  requires:
+    toolchains:
+    - go@1.25
+    sidecars:
+    - dockerd
