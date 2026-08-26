@@ -1,0 +1,21 @@
+# Apply the whole catalog into one namespace:
+#   kubectl apply -k .
+# Override `namespace:` below to target your own squad's namespace.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: bmad-squad
+resources:
+- skills/bmad/skill.yaml
+- skills/github/skill.yaml
+- skills/dynatrace/skill.yaml
+- skills/graphical/skill.yaml
+- skills/code-search/skill.yaml
+- skills/kubectl-debug/skill.yaml
+- skills/go-build-test/skill.yaml
+- skills/git-workflow/skill.yaml
+- skills/golangci-lint/skill.yaml
+- skills/otel-observability-query/skill.yaml
+- skills/container-build/skill.yaml
+- skills/delve-pprof/skill.yaml
+- skills/psql-inspect/skill.yaml
+- skills/http-grpc-probe/skill.yaml

@@ -1,0 +1,19 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: container-build
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: "# Container build\n\ndocker / buildkit build, run, and inspect \u2014 reproduce a build failure\
+      \ or\nrun an image locally. Uses the dockerd sidecar; egress is gated to the\nregistry only. Do\
+      \ not push unless explicitly asked.\n"
+  permissions:
+  - exec:docker
+  - net:egress:registry
+  requires:
+    toolchains:
+    - docker-cli@27
+    sidecars:
+    - dockerd

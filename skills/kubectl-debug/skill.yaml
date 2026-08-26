@@ -1,0 +1,22 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: kubectl-debug
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: "# kubectl (read-only + ephemeral debug)\n\nRead-only cluster introspection for real-cluster\
+      \ debugging:\n  kubectl get / describe / logs / events / top\n  kubectl debug   \u2014 attach an\
+      \ ephemeral container to a running pod\n\nNever apply, edit, patch, scale, or delete. Stay in the\
+      \ namespace you were\ngranted. Use this to see what a failing Run/pod is actually doing before\n\
+      forming a hypothesis.\n"
+  permissions:
+  - k8s:get
+  - k8s:list
+  - k8s:watch
+  - k8s:logs
+  - k8s:debug:ephemeral
+  requires:
+    toolchains:
+    - kubectl@1.31

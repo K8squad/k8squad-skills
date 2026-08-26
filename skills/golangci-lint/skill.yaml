@@ -1,0 +1,25 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: golangci-lint
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: '# golangci-lint
+
+
+      Run the repo''s static-analysis gate locally so Coder/Reviewer catch what
+
+      CI''s golangci-lint-action would reject. Use the repo''s .golangci.yml; do
+
+      not weaken it. Fix findings at the root, not per-caller.
+
+      '
+  permissions:
+  - fs:read
+  - exec:golangci-lint
+  requires:
+    toolchains:
+    - go@1.25
+    - golangci-lint@2.1

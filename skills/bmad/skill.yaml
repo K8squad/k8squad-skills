@@ -1,0 +1,19 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: bmad
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: "# BMAD Method\n\nThe Breakthrough Method of Agile AI-Driven Development (BMAD) structures\n\
+      squad work into phases with explicit handoffs:\n\n1. Analysis   \u2014 Brainstormer explores the\
+      \ problem space; domain research.\n2. Product    \u2014 Product Manager writes the PRD from validated\
+      \ needs.\n3. Solutioning\u2014 Architect turns the PRD into architecture decisions.\n4. Stories\
+      \    \u2014 requirements decompose into epics and stories.\n5. Delivery   \u2014 Coder implements;\
+      \ Code Reviewer and Test Architect gate.\n6. Operate    \u2014 DevOps and Observability Engineer\
+      \ ship and watch it run.\n\nPrinciples: user journeys drive technical decisions; prefer boring,\n\
+      proven technology; every decision ties to business value; verify before\nclaiming done; hand work\
+      \ off with enough context to start without asking.\n"
+  permissions:
+  - workflow:bmad

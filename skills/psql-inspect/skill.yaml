@@ -1,0 +1,17 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: psql-inspect
+  namespace: bmad-squad
+spec:
+  source:
+    type: inline
+    inline: "# psql (read-only)\n\nRead-only psql into the coordination / run-source Postgres to inspect\n\
+      migrations, Run state, and coord tables (the repo is Postgres-heavy:\ninternal/runsource/postgres.go,\
+      \ db/migrations/*). SELECT only \u2014 the DB\nrole carries no write grant; egress is gated to Postgres.\n"
+  permissions:
+  - db:read
+  - net:egress:postgres
+  requires:
+    toolchains:
+    - postgres-client@16

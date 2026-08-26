@@ -1,0 +1,18 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: graphical
+  namespace: bmad-squad
+spec:
+  source:
+    type: git
+    git:
+      repoRef: github.com/K8squad/k8squad-skills
+      ref: 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
+      path: skills/graphical
+  permissions:
+  - render:svg
+  - asset:write
+  requires:
+    toolchains:
+    - node@22
