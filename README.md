@@ -40,6 +40,123 @@ Each skill lives in its own directory under `skills/<name>/` with a `skill.yaml`
 | [`psql-inspect`](skills/psql-inspect) | debug | Read-only psql into the coordination/run-source DB. |
 | [`http-grpc-probe`](skills/http-grpc-probe) | debug _(optional)_ | curl/grpcurl probing of live endpoints. |
 
+## The capability plane (how a Skill actually resolves)
+
+With the Skills & tools implementation landed (ISI-3280 Epics A–C, ADRs
+042–045), a Skill is not a standalone artifact — it resolves at admission and
+Run assembly against live cluster objects. Everything below is **fail-closed**.
+
+### `mcpToolRefs` → `MCPServer` (ADR-042)
+
+`spec.mcpToolRefs[]` entries are `{name, namespace?}` refs (empty namespace =
+the Skill's own). Resolution:
+
+- **Dangling ref** → the **Skill is rejected at admission** (validating
+  webhook), and re-checked at Run assembly in case the admission cache is
+  stale — same outcome.
+- The MCPServer's tool surface must be **discovered**: the control-plane
+  discovery controller runs the MCP handshake (`initialize` → `tools/list`)
+  on create/spec-change and every `discovery.intervalMinutes` (default 10),
+  recording `status.observedTools` and the `Ready` / `CredentialsValid` /
+  `EgressAllowed` / `ToolsDiscovered` conditions. A Run referencing a server
+  with an empty `observedTools` stays **Pending** — Runs never admit against
+  an unknown tool surface (ADR-042 staleness).
+- **Credentials**: `MCPServer.spec.credentialSecretRef` names a BYO Secret
+  (default key `token`). It is projected into the Run pod **only as an env
+  var** — `KSQUAD_MCP_<UPPER(NAME)>_TOKEN` (e.g. server `github-mcp` →
+  `KSQUAD_MCP_GITHUB_MCP_TOKEN`). Secret material never lands in a file the
+  runtime reads, in status, or in logs (ADR-045 D5). A missing Secret sets
+  `CredentialsValid=False` and blocks the Run without deleting the server —
+  rotation never requires re-apply.
+- **stdio servers with an `image`** are staged as sidecar containers in Run
+  pods of Runs whose skills reference them; streamable-http servers are wired
+  into the runtime's native MCP config (ADR-044 step 6).
+
+### `toolFilter` — skills only narrow, never widen (D8)
+
+The **server** owns the tool envelope: `MCPServer.spec.toolFilter.allow`
+(globs; empty = all observed tools) minus `.deny` (globs subtracted). At
+v1alpha1 a Skill's `mcpToolRefs` entry carries **no filter of its own** — the
+skill's act is *selecting* a server, which can only ever grant a subset of
+what that server already allows. A fetched git body never sees envelope
+authority at all.
+
+Fail-closed corners (all reject the Run / the MCPServer):
+
+- exact-string overlap between `allow` and `deny` → MCPServer admission
+  rejected (CEL);
+- glob overlap that empties the effective allow set → Run assembly fails
+  closed instead of passing silently;
+- `egressRef` unresolvable → `EgressAllowed=False` → Run blocked.
+
+### `requires.toolchains` → the Toolchain catalog (ADR-043)
+
+`name@version` refs resolve against the cluster default catalog (Toolchain
+objects in the control-plane namespace), enabled with one Helm flag:
+
+```sh
+helm install k8squad ... --set tools.defaultCatalog.enabled=true
+```
+
+The curated set this catalog's skills pin against:
+
+| Toolchain | Version | RBAC |
+|-----------|---------|------|
+| `kubectl@1.31` | 1.31 | read-only core+apps, namespace scope |
+| `git@2.45` | 2.45 | none |
+| `gh@2.62` | 2.62 | none |
+| `go@1.23` | 1.23 | none |
+| `node@22` | 22 | none |
+| `dtctl@1.0` | 1.0 | none |
+| `helm@3.16` | 3.16 | none |
+
+Resolution rules (all enforced at **Run admission** via the same resolver Run
+assembly uses):
+
+- unknown `name` or `version` → Run rejected with an actionable message
+  naming the demanding skill (e.g. "toolchain go@1.25 not found; catalog
+  carries 1.23" — enable the default catalog, define the Toolchain, or align
+  the version pin);
+- the same toolchain name at two versions across one Run's skills → Run
+  rejected (§5.3.4 — no silent latest-wins);
+- team-namespace Toolchains may **narrow** catalog entries (subset versions,
+  subset RBAC) but never widen; a team namespace cannot originate Kubernetes
+  authority.
+
+**BYO long-tail tools**: skills referencing tools outside the curated seven
+(`ripgrep`, `ast-grep`, `docker-cli`, `delve`, `golangci-lint`, `curl`,
+`grpcurl`, `postgres-client`) are admitted only when your cluster defines the
+matching team-namespace `Toolchain` objects (no `rbac` block needed — the
+supported v1alpha1 long-tail path, ADR-043). Their `skill.yaml` pins are the
+tested versions, not catalog shipments.
+
+### SHA pinning (§5.3.6)
+
+Every `git`-sourced skill pins `ref` to an **immutable commit SHA** — never a
+floating branch. A Run resolves its skills to immutable revisions, so a
+force-push to this repo cannot silently alter in-flight behavior; moving refs
+are admitted only behind the explicit, audited `ksquad.io/trusted-dev`
+posture. The self-referential `ref` fields in this catalog are pinned to real
+merge commits and re-pinned to the new merge commit on each release.
+
+### What usage reporting you get for free (ISI-3288 / ISI-3352)
+
+Skill authors instrument nothing. The platform emits:
+
+- **OTel spans** (GenAI semconv v1.40): `skill.load`, and `gen_ai.tool.call`
+  per tool call carrying `gen_ai.tool.name` and
+  `gen_ai.tool.call.arguments` (hex sha256 of the arguments — hashed, never
+  raw), plus `ksquad.run.id`, `ksquad.agent.name`, `ksquad.skill.name`,
+  `ksquad.skill.source.sha`, `ksquad.mcp.server`, `ksquad.outcome`.
+- **Prometheus metrics** on the operator `/metrics`: 
+  `ksquad_skill_loads_total`, `ksquad_tool_calls_total`,
+  `ksquad_mcp_call_duration_seconds` (histogram), and
+  `ksquad_tool_usage_pipeline_up` (the pipeline liveness marker — its
+  presence in an exposition proves the pipeline is wired and scrapeable).
+
+The OTelConfig watcher can toggle the pipeline at runtime; the default
+posture is emit.
+
 ## Install
 
 Apply one skill:
@@ -100,16 +217,20 @@ lean on the `bmad` / `github` / `graphical` defaults only):
 
 ## Trust & least-privilege notes
 
-- **Pin every `git`-sourced `ref` to an immutable commit SHA** — floating
-  branches are rejected outside an explicit dev posture (arch §5.3.6). The SHAs
-  shipped here are placeholders; pin them to a merged commit before production.
+- **Every `git`-sourced `ref` is pinned to an immutable commit SHA** — floating
+  branches are rejected outside the explicit trusted-dev posture (arch
+  §5.3.6). Catalog releases re-pin the self-referential SHAs to each merge
+  commit.
 - **`permissions[]` are least-privilege and read-first.** `kubectl-debug`,
   `otel-observability-query`, and `psql-inspect` carry no write/apply/delete
   verbs. A git-sourced body cannot widen this envelope (D8).
 - **`dockerd`-sidecar skills** (`go-build-test`, `container-build`) only resolve
   where `AgentRuntime.capabilities` grants the sidecar (arch §5.3.3/§5.3.4).
-- **Toolchain versions are standardized** (`go@1.25`, `kubectl@1.31`) — mixing
-  versions across a Run's skills fails closed at pod assembly (arch §5.3.4).
+- **Toolchain refs split in two tiers**: the curated catalog set
+  (`kubectl@1.31`, `git@2.45`, `gh@2.62`, `go@1.23`, `node@22`, `dtctl@1.0`,
+  `helm@3.16`) resolves with `tools.defaultCatalog.enabled=true`; everything
+  else is BYO via team-namespace Toolchains. Mixing versions of one toolchain
+  across a Run's skills fails closed at admission (§5.3.4).
 
 ## License
 

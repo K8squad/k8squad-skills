@@ -23,5 +23,5 @@ spec:
   - k8s:port-forward
   requires:
     toolchains:
-    - go@1.25
+    - go@1.23
     - delve@1.24

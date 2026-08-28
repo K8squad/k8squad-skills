@@ -16,4 +16,4 @@ spec:
   - exec:git
   requires:
     toolchains:
-    - git@2.47
+    - git@2.45

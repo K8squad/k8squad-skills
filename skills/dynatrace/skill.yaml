@@ -8,7 +8,7 @@ spec:
     type: git
     git:
       repoRef: github.com/K8squad/k8squad-skills
-      ref: 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
+      ref: bf3bc86b338d488fe751c289943db194ce8102c7
       path: skills/dynatrace
   mcpToolRefs:
   - name: dynatrace-mcp

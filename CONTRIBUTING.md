@@ -33,6 +33,8 @@ spec:
     inline: |             # required when type=inline
       # <name>
       <the skill body the agent reads>
+  mcpToolRefs:            # optional: MCP servers this skill is granted
+    - name: <mcpserver>   # must exist in the namespace at admission
   permissions:            # the narrowest capability envelope the skill needs
     - <capability>
   requires:               # optional toolchains / sidecars
@@ -40,6 +42,36 @@ spec:
 ```
 
 New skills must also be listed in the root `kustomization.yaml`.
+
+### Capability-plane requirements (fail-closed)
+
+Your skill resolves against live cluster objects — keep these true or Runs
+will be rejected at admission:
+
+- **`mcpToolRefs[].name` must resolve to an existing `MCPServer`** in the
+  skill's namespace (or the ref's explicit `namespace`). A dangling ref
+  rejects the Skill itself at admission. The skill can only *narrow* the
+  server's envelope — `mcpToolRefs` carries no filter fields, so it can
+  never widen `MCPServer.spec.toolFilter` (trust boundary D8). Document the
+  expected server name/shape in your README (see
+  `examples/bmad-team/02b-mcpservers.yaml` in the main repo for templates).
+- **`requires.toolchains` entries resolve as `name@version`** against the
+  cluster Toolchain catalog. Prefer the curated set shipped by
+  `tools.defaultCatalog.enabled=true` (`kubectl@1.31`, `git@2.45`, `gh@2.62`,
+  `go@1.23`, `node@22`, `dtctl@1.0`, `helm@3.16`); anything else is BYO and
+  your README must say which `Toolchain` objects the operator must define.
+  An unknown `name@version`, or two versions of one toolchain across a Run's
+  skills, rejects the Run with an actionable message.
+- **`source.git.ref` must be a 40-character commit SHA** (also a MEDIUM
+  security-review trigger below) — Runs resolve skills to immutable
+  revisions; a force-push cannot alter an in-flight Run.
+- **Credentials never appear in the skill** — servers reference Secrets via
+  `credentialSecretRef`; the platform projects them per-Run as env vars
+  (`KSQUAD_MCP_<NAME>_TOKEN`), never as files (ADR-045 D5).
+- **You instrument nothing.** Skill loads, tool calls, and MCP call
+  durations are reported automatically as GenAI-semconv OTel spans
+  (`skill.load`, `gen_ai.tool.call`) and `ksquad_*` Prometheus metrics —
+  see the root README for the full list.
 
 ## Automated checks (run on every PR)
 
