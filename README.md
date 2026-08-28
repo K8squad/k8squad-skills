@@ -16,13 +16,14 @@ squad references this catalog rather than re-inlining the definitions.
 Each skill lives in its own directory under `skills/<name>/` with a `skill.yaml`
 (the CR) and a `README.md` (purpose, roles, permissions, wiring).
 
-### 4 defaults
+### Defaults
 
 | Skill | Focus | Purpose |
 |-------|-------|---------|
 | [`bmad`](skills/bmad) | method | The BMAD phased-workflow method (inline). |
 | [`github`](skills/github) | dev | Remote git / PR / issue ops via the GitHub CLI (`gh`). |
-| [`dynatrace`](skills/dynatrace) | debug | Dynatrace control-plane (dtctl) for observability. |
+| [`dynatrace`](skills/dynatrace) | debug | Dynatrace control-plane (dtctl) for observability — agent body git-sourced from upstream `dynatrace-oss/dtctl`. |
+| [`dt-dql-essentials`](skills/dt-dql-essentials) | debug | DQL syntax / pitfalls / query optimization — git-sourced from upstream `Dynatrace/dynatrace-for-ai`. |
 | [`graphical`](skills/graphical) | dev | Diagram / SVG asset rendering. |
 
 ### Dev / debug set (9 core + 1 optional — from ISI-3271)
@@ -154,6 +155,16 @@ are admitted only behind the explicit, audited `ksquad.io/trusted-dev`
 posture. The self-referential `ref` fields in this catalog are pinned to real
 merge commits and re-pinned to the new merge commit on each release.
 
+Two skills source their agent-facing body from **upstream Dynatrace repos**
+rather than this catalog — [`dynatrace`](skills/dynatrace) from
+`dynatrace-oss/dtctl` (`skills/dtctl`) and
+[`dt-dql-essentials`](skills/dt-dql-essentials) from
+`Dynatrace/dynatrace-for-ai` (`skills/dt-dql-essentials`), both Apache-2.0.
+They follow the same pinning discipline: an immutable upstream commit SHA,
+re-pinned deliberately after reviewing the upstream diff. The fetched body is
+untrusted input (D8) — it can never widen the `permissions` /
+`mcpToolRefs` envelope authored here.
+
 ### What usage reporting you get for free (ISI-3288 / ISI-3352)
 
 Skill authors instrument nothing. The platform emits:
@@ -224,7 +235,7 @@ lean on the `bmad` / `github` / `graphical` defaults only):
 | **Code Reviewer** | code-search, golangci-lint, go-build-test, git-workflow, github |
 | **Test Architect** | go-build-test, code-search, git-workflow, kubectl-debug, psql-inspect, otel-observability-query |
 | **DevOps** | kubectl-debug, container-build, git-workflow, psql-inspect, otel-observability-query, github |
-| **Observability** | otel-observability-query, kubectl-debug, delve-pprof, dynatrace |
+| **Observability** | otel-observability-query, kubectl-debug, delve-pprof, dynatrace, dt-dql-essentials |
 | **Architect** | code-search, graphical |
 | **Graphical Designer** | graphical |
 | **Challenger** | code-search |

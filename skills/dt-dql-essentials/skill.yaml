@@ -1,0 +1,14 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: dt-dql-essentials
+spec:
+  source:
+    type: git
+    git:
+      repoRef: github.com/Dynatrace/dynatrace-for-ai
+      ref: 08ef3f38d5daeb0e687ac4baf505658906282814
+      path: skills/dt-dql-essentials
+  permissions:
+  - observability:read
+  - telemetry:query

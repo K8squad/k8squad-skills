@@ -8,6 +8,7 @@ resources:
 - skills/bmad/skill.yaml
 - skills/github/skill.yaml
 - skills/dynatrace/skill.yaml
+- skills/dt-dql-essentials/skill.yaml
 - skills/graphical/skill.yaml
 - skills/code-search/skill.yaml
 - skills/kubectl-debug/skill.yaml
