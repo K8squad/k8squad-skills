@@ -21,7 +21,7 @@ Each skill lives in its own directory under `skills/<name>/` with a `skill.yaml`
 | Skill | Focus | Purpose |
 |-------|-------|---------|
 | [`bmad`](skills/bmad) | method | The BMAD phased-workflow method (inline). |
-| [`github`](skills/github) | dev | Remote git / PR / issue ops via the GitHub MCP. |
+| [`github`](skills/github) | dev | Remote git / PR / issue ops via the GitHub CLI (`gh`). |
 | [`dynatrace`](skills/dynatrace) | debug | Dynatrace control-plane (dtctl) for observability. |
 | [`graphical`](skills/graphical) | dev | Diagram / SVG asset rendering. |
 
@@ -45,6 +45,20 @@ Each skill lives in its own directory under `skills/<name>/` with a `skill.yaml`
 With the Skills & tools implementation landed (ISI-3280 Epics A–C, ADRs
 042–045), a Skill is not a standalone artifact — it resolves at admission and
 Run assembly against live cluster objects. Everything below is **fail-closed**.
+
+A skill grants tools through **two independent paths**, and most skills need
+only one:
+
+- **Toolchains** (`requires.toolchains`, §5.3.2) — a CLI pack staged as an
+  init container, e.g. `gh@2.62`, `dtctl@1.0`, `node@22`. This is the path
+  **every skill in this catalog uses**: `github` drives `gh`, `dynatrace`/
+  `otel-observability-query` drive `dtctl`, `graphical` drives `node`. A CLI
+  tool does not need an MCPServer.
+- **`mcpToolRefs` → `MCPServer`** — for a network tool surface reachable
+  **only over MCP** (a hosted service that speaks the protocol, not a CLI).
+  No catalog skill currently needs this, but the platform supports it and the
+  semantics are documented below so authors of MCP-backed skills know the
+  rules.
 
 ### `mcpToolRefs` → `MCPServer` (ADR-042)
 

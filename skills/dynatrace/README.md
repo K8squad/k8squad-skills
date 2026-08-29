@@ -1,47 +1,37 @@
 # `dynatrace` Skill
 
-Dynatrace control-plane (dtctl) for observability.
+Dynatrace control-plane observability via the `dtctl` CLI.
 
 - **Focus:** debug
 - **Category:** default
 - **Source:** git — `github.com/K8squad/k8squad-skills` path `skills/dynatrace`, pinned to commit `bf3bc86`
 - **Attach to roles:** Observability
 - **Permissions (least-privilege):** `observability:read`, `telemetry:query`
-- **MCP tools:** `dynatrace-mcp` (stdio sidecar)
 - **Toolchains:** `dtctl@1.0` (ships in the cluster default catalog)
+
+This skill drives Dynatrace through the `dtctl` CLI toolchain — it does
+**not** require an `MCPServer`. `dtctl` speaks to the Dynatrace API directly,
+authenticated by a BYO token env var, so there is no MCP sidecar to run or
+discover.
 
 ## Prerequisites (fail-closed)
 
 This skill resolves against live capability-plane objects — the Run is
-rejected at admission until all of them check out:
+rejected at admission until they check out:
 
-1. **An `MCPServer` named `dynatrace-mcp`** in the skill's namespace (see
-   [`examples/bmad-team/02b-mcpservers.yaml`](https://github.com/K8squad/K8squad/tree/main/examples/bmad-team)
-   in the main repo for a ready template: stdio transport with a packaged
-   `image`, `toolFilter: allow ["query_*", "list_*", "get_*"]`). A dangling
-   `mcpToolRefs` entry rejects the Skill at admission. Because the server
-   declares an `image`, Run assembly stages it as a **sidecar container** in
-   the Run pod (ADR-044 step 6) — pin the image digest in real use.
-2. **Discovery succeeded** — `status.observedTools` non-empty and
-   `ToolsDiscovered=True`. The discovery controller's stdio probe runs the
-   same image as a short-lived Job in the MCPServer's namespace
-   (`initialize` → `tools/list`); the operator never executes the server's
-   command in its own process (D8). Until the first probe succeeds, Runs
-   referencing this skill stay Pending (ADR-042 staleness).
-3. **The API token Secret** referenced by `MCPServer.spec.credentialSecretRef`
-   (e.g. `dynatrace-mcp-token`, key `token`). Projected into the Run pod only
-   as an env var (`KSQUAD_MCP_DYNATRACE_MCP_TOKEN`) — never into any file
-   the runtime reads (ADR-045 D5). A missing Secret sets
-   `CredentialsValid=False` and blocks the Run.
-4. **The toolchain catalog**: enable it at install time
+1. **The toolchain catalog** is enabled at install time
    (`--set tools.defaultCatalog.enabled=true`) so `dtctl@1.0` resolves; an
-   unknown `name@version` rejects the Run at admission.
+   unknown `name@version` rejects the Run at admission. The pack is staged as
+   an init container (§5.3.2); version conflicts across a Run's skills fail
+   closed (§5.3.4).
+2. **A Dynatrace API token** for `dtctl` — a BYO scoped token Secret projected
+   into the Run pod **only as an env var** (e.g. `DT_API_TOKEN`), never into
+   any file the runtime reads (ADR-045 D5). A missing token leaves `dtctl`
+   unauthenticated and the skill's query permissions inert.
 
-The skill can only *narrow* the server's envelope: `mcpToolRefs` selects
-which server to grant — it carries no filter of its own, so a skill can
-never widen `MCPServer.spec.toolFilter` (trust boundary D8). The effective
-tool set is computed at Run assembly: server `allow` globs (empty = all
-observed tools) minus `deny` globs; an empty effective set fails closed.
+The CRD-authorized `permissions` envelope (`observability:read`,
+`telemetry:query`) is set by the operator/admin who registers the skill and is
+never widened by the fetched skill body (trust boundary D8).
 
 ## Install
 
@@ -75,7 +65,6 @@ Skill/tool usage is reported automatically — nothing to opt into:
 - OTel spans: `skill.load` and `gen_ai.tool.call` (GenAI semconv:
   `gen_ai.tool.name`, `gen_ai.tool.call.arguments` = hex sha256 of the args),
   carrying `ksquad.run.id`, `ksquad.agent.name`, `ksquad.skill.name`,
-  `ksquad.skill.source.sha`, `ksquad.mcp.server`.
+  `ksquad.skill.source.sha`.
 - Prometheus metrics on the operator: `ksquad_skill_loads_total`,
-  `ksquad_tool_calls_total`, `ksquad_mcp_call_duration_seconds`,
-  `ksquad_tool_usage_pipeline_up`.
+  `ksquad_tool_calls_total`, `ksquad_tool_usage_pipeline_up`.

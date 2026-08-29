@@ -1,29 +1,31 @@
 # `otel-observability-query` Skill
 
-Read-only trace/log/span query via MCP (Dynatrace DQL).
+Read-only trace/log/span query via the `dtctl` CLI (Dynatrace DQL).
 
 - **Focus:** debug
 - **Category:** dev-debug
 - **Source:** git — `github.com/K8squad/k8squad-skills` path `skills/otel-observability-query`, pinned to commit `bf3bc86`
 - **Attach to roles:** Observability, Coder, Test Architect, DevOps
 - **Permissions (least-privilege):** `dt:query:logs`, `dt:query:spans`, `dt:query:metrics`
-- **MCP tools:** `dynatrace-mcp` (stdio sidecar; read-only `query_*`/`list_*`/`get_*` envelope)
+- **Toolchains:** `dtctl@1.0` (ships in the cluster default catalog)
+
+Read-only DQL querying through the `dtctl` CLI toolchain — no `MCPServer`
+required. The narrow `dt:query:*` permission envelope keeps this skill to
+read paths (logs/spans/metrics); it shares the same `dtctl` access path as the
+[`dynatrace`](../dynatrace) skill but without any write/control verbs.
 
 ## Prerequisites (fail-closed)
 
-1. **An `MCPServer` named `dynatrace-mcp`** in the skill's namespace — the
-   same server the [`dynatrace`](../dynatrace) skill uses (template in
-   [`examples/bmad-team/02b-mcpservers.yaml`](https://github.com/K8squad/K8squad/tree/main/examples/bmad-team)).
-   A dangling `mcpToolRefs` entry rejects the Skill at admission.
-2. **Discovery succeeded** — `status.observedTools` non-empty and
-   `ToolsDiscovered=True` (control-plane `initialize` → `tools/list` probe).
-   Until then, Runs referencing this skill stay Pending (ADR-042 staleness).
-3. **The API token Secret** behind `MCPServer.spec.credentialSecretRef` —
-   projected per-Run as an env var only (ADR-045 D5).
+1. **The toolchain catalog** is enabled at install time
+   (`--set tools.defaultCatalog.enabled=true`) so `dtctl@1.0` resolves; an
+   unknown `name@version` rejects the Run at admission.
+2. **A Dynatrace API token** for `dtctl` — a BYO read-only scoped token Secret
+   projected per-Run as an env var only (e.g. `DT_API_TOKEN`), never into any
+   file the runtime reads (ADR-045 D5).
 
-The server's `toolFilter` (`query_*`, `list_*`, `get_*`) is the ceiling:
-this skill's queries can only run tools inside that envelope (D8 — skills
-narrow, never widen).
+The CRD-authorized `permissions` envelope (`dt:query:logs`, `dt:query:spans`,
+`dt:query:metrics`) is the read-only ceiling — set by the operator/admin and
+never widened by the fetched skill body (trust boundary D8).
 
 ## Install
 
@@ -57,7 +59,6 @@ Skill/tool usage is reported automatically — nothing to opt into:
 - OTel spans: `skill.load` and `gen_ai.tool.call` (GenAI semconv:
   `gen_ai.tool.name`, `gen_ai.tool.call.arguments` = hex sha256 of the args),
   carrying `ksquad.run.id`, `ksquad.agent.name`, `ksquad.skill.name`,
-  `ksquad.skill.source.sha`, `ksquad.mcp.server`.
+  `ksquad.skill.source.sha`.
 - Prometheus metrics on the operator: `ksquad_skill_loads_total`,
-  `ksquad_tool_calls_total`, `ksquad_mcp_call_duration_seconds`,
-  `ksquad_tool_usage_pipeline_up`.
+  `ksquad_tool_calls_total`, `ksquad_tool_usage_pipeline_up`.

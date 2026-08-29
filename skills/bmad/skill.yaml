@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: bmad
-  namespace: bmad-squad
 spec:
   source:
     type: inline

@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: otel-observability-query
-  namespace: bmad-squad
 spec:
   source:
     type: git
@@ -10,9 +9,10 @@ spec:
       repoRef: github.com/K8squad/k8squad-skills
       ref: bf3bc86b338d488fe751c289943db194ce8102c7
       path: skills/otel-observability-query
-  mcpToolRefs:
-  - name: dynatrace-mcp
   permissions:
   - dt:query:logs
   - dt:query:spans
   - dt:query:metrics
+  requires:
+    toolchains:
+    - dtctl@1.0

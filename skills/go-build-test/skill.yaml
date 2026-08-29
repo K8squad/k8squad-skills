@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: go-build-test
-  namespace: bmad-squad
 spec:
   source:
     type: inline
