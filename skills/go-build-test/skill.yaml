@@ -21,6 +21,6 @@ spec:
   - exec:go
   requires:
     toolchains:
-    - go@1.23
+    - go@1.26
     sidecars:
     - dockerd

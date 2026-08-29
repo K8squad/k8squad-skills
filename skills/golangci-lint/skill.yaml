@@ -20,5 +20,5 @@ spec:
   - exec:golangci-lint
   requires:
     toolchains:
-    - go@1.23
+    - go@1.26
     - golangci-lint@2.1

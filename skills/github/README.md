@@ -7,7 +7,7 @@ Remote git / PR / issue operations via the GitHub CLI (`gh`).
 - **Source:** git — `github.com/K8squad/k8squad-skills` path `skills/github`, pinned to commit `bf3bc86`
 - **Attach to roles:** Coder, Code Reviewer, DevOps
 - **Permissions (least-privilege):** `scm:read`, `scm:write`, `pr:write`, `issue:write`
-- **Toolchains:** `gh@2.62` (ships in the cluster default catalog)
+- **Toolchains:** `gh@2.98` (ships in the cluster default catalog)
 
 This skill drives GitHub through the `gh` CLI toolchain — it does **not**
 require an `MCPServer`. The `gh` binary covers the full scm/pr/issue surface,
@@ -22,7 +22,7 @@ This skill resolves against live capability-plane objects — the Run is
 rejected at admission until they check out:
 
 1. **The toolchain catalog** is enabled at install time
-   (`--set tools.defaultCatalog.enabled=true`) so `gh@2.62` resolves; an
+   (`--set tools.defaultCatalog.enabled=true`) so `gh@2.98` resolves; an
    unknown `name@version` rejects the Run at admission. The pack is staged as
    an init container (§5.3.2); version conflicts across a Run's skills fail
    closed (§5.3.4).

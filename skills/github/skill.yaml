@@ -16,4 +16,4 @@ spec:
   - issue:write
   requires:
     toolchains:
-    - gh@2.62
+    - gh@2.98

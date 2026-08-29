@@ -57,8 +57,8 @@ will be rejected at admission:
   `examples/bmad-team/02b-mcpservers.yaml` in the main repo for templates).
 - **`requires.toolchains` entries resolve as `name@version`** against the
   cluster Toolchain catalog. Prefer the curated set shipped by
-  `tools.defaultCatalog.enabled=true` (`kubectl@1.31`, `git@2.45`, `gh@2.62`,
-  `go@1.23`, `node@22`, `dtctl@1.0`, `helm@3.16`); anything else is BYO and
+  `tools.defaultCatalog.enabled=true` (`kubectl@1.36`, `git@2.45`, `gh@2.98`,
+  `go@1.26`, `node@22`, `dtctl@1.0`, `helm@3.21`); anything else is BYO and
   your README must say which `Toolchain` objects the operator must define.
   An unknown `name@version`, or two versions of one toolchain across a Run's
   skills, rejects the Run with an actionable message.

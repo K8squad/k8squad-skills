@@ -7,7 +7,7 @@ Read-only cluster introspection + ephemeral debug containers.
 - **Source:** inline (self-contained body in the CR)
 - **Attach to roles:** DevOps, Observability, Coder, Test Architect
 - **Permissions (least-privilege):** `k8s:get`, `k8s:list`, `k8s:watch`, `k8s:logs`, `k8s:debug:ephemeral`
-- **Toolchains:** `kubectl@1.31`
+- **Toolchains:** `kubectl@1.36`
 
 ## Install
 

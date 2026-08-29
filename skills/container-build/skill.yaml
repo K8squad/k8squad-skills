@@ -13,6 +13,6 @@ spec:
   - net:egress:registry
   requires:
     toolchains:
-    - docker-cli@27
+    - docker-cli@29
     sidecars:
     - dockerd

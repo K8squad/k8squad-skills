@@ -50,7 +50,7 @@ A skill grants tools through **two independent paths**, and most skills need
 only one:
 
 - **Toolchains** (`requires.toolchains`, §5.3.2) — a CLI pack staged as an
-  init container, e.g. `gh@2.62`, `dtctl@1.0`, `node@22`. This is the path
+  init container, e.g. `gh@2.98`, `dtctl@1.0`, `node@22`. This is the path
   **every skill in this catalog uses**: `github` drives `gh`, `dynatrace`/
   `otel-observability-query` drive `dtctl`, `graphical` drives `node`. A CLI
   tool does not need an MCPServer.
@@ -116,20 +116,21 @@ The curated set this catalog's skills pin against:
 
 | Toolchain | Version | RBAC |
 |-----------|---------|------|
-| `kubectl@1.31` | 1.31 | read-only core+apps, namespace scope |
+| `kubectl@1.36` | 1.36 | read-only core+apps, namespace scope |
 | `git@2.45` | 2.45 | none |
-| `gh@2.62` | 2.62 | none |
-| `go@1.23` | 1.23 | none |
+| `gh@2.98` | 2.98 | none |
+| `go@1.26` | 1.26 | none |
 | `node@22` | 22 | none |
 | `dtctl@1.0` | 1.0 | none |
-| `helm@3.16` | 3.16 | none |
+| `docker-cli@29` | 29 | none |
+| `helm@3.21` | 3.21 | none |
 
 Resolution rules (all enforced at **Run admission** via the same resolver Run
 assembly uses):
 
 - unknown `name` or `version` → Run rejected with an actionable message
   naming the demanding skill (e.g. "toolchain go@1.25 not found; catalog
-  carries 1.23" — enable the default catalog, define the Toolchain, or align
+  carries 1.26" — enable the default catalog, define the Toolchain, or align
   the version pin);
 - the same toolchain name at two versions across one Run's skills → Run
   rejected (§5.3.4 — no silent latest-wins);
@@ -137,9 +138,9 @@ assembly uses):
   subset RBAC) but never widen; a team namespace cannot originate Kubernetes
   authority.
 
-**BYO long-tail tools**: skills referencing tools outside the curated seven
-(`ripgrep`, `ast-grep`, `docker-cli`, `delve`, `golangci-lint`, `curl`,
-`grpcurl`, `postgres-client`) are admitted only when your cluster defines the
+**BYO long-tail tools**: skills referencing tools outside the curated default
+catalog (`ripgrep`, `ast-grep`, `delve`, `golangci-lint`, `grpcurl`,
+`postgres-client`) are admitted only when your cluster defines the
 matching team-namespace `Toolchain` objects (no `rbac` block needed — the
 supported v1alpha1 long-tail path, ADR-043). Their `skill.yaml` pins are the
 tested versions, not catalog shipments.
@@ -241,8 +242,9 @@ lean on the `bmad` / `github` / `graphical` defaults only):
 - **`dockerd`-sidecar skills** (`go-build-test`, `container-build`) only resolve
   where `AgentRuntime.capabilities` grants the sidecar (arch §5.3.3/§5.3.4).
 - **Toolchain refs split in two tiers**: the curated catalog set
-  (`kubectl@1.31`, `git@2.45`, `gh@2.62`, `go@1.23`, `node@22`, `dtctl@1.0`,
-  `helm@3.16`) resolves with `tools.defaultCatalog.enabled=true`; everything
+  (`kubectl@1.36`, `git@2.45`, `gh@2.98`, `go@1.26`, `node@22`, `dtctl@1.0`,
+  `docker-cli@29`, `curl@8`, `helm@3.21`, …) resolves with
+  `tools.defaultCatalog.enabled=true`; everything
   else is BYO via team-namespace Toolchains. Mixing versions of one toolchain
   across a Run's skills fails closed at admission (§5.3.4).
 
