@@ -7,7 +7,7 @@ docker / buildkit build, run, inspect — reproduce build failures locally.
 - **Source:** inline (self-contained body in the CR)
 - **Attach to roles:** DevOps, Coder
 - **Permissions (least-privilege):** `exec:docker`, `net:egress:registry`
-- **Toolchains:** `docker-cli@27`
+- **Toolchains:** `docker-cli@29`
 - **Sidecars:** `dockerd`
 
 ## Install

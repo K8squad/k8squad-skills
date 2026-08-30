@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: container-build
-  namespace: bmad-squad
 spec:
   source:
     type: inline
@@ -14,6 +13,6 @@ spec:
   - net:egress:registry
   requires:
     toolchains:
-    - docker-cli@27
+    - docker-cli@29
     sidecars:
     - dockerd

@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: go-build-test
-  namespace: bmad-squad
 spec:
   source:
     type: inline
@@ -22,6 +21,6 @@ spec:
   - exec:go
   requires:
     toolchains:
-    - go@1.25
+    - go@1.26
     sidecars:
     - dockerd

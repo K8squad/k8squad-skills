@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: git-workflow
-  namespace: bmad-squad
 spec:
   source:
     type: inline
@@ -16,4 +15,4 @@ spec:
   - exec:git
   requires:
     toolchains:
-    - git@2.47
+    - git@2.45

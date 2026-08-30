@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: psql-inspect
-  namespace: bmad-squad
 spec:
   source:
     type: inline

@@ -2,7 +2,6 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: delve-pprof
-  namespace: bmad-squad
 spec:
   source:
     type: inline
@@ -23,5 +22,5 @@ spec:
   - k8s:port-forward
   requires:
     toolchains:
-    - go@1.25
+    - go@1.26
     - delve@1.24

@@ -2,16 +2,13 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: github
-  namespace: bmad-squad
 spec:
   source:
     type: git
     git:
       repoRef: github.com/K8squad/k8squad-skills
-      ref: 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
+      ref: bf3bc86b338d488fe751c289943db194ce8102c7
       path: skills/github
-  mcpToolRefs:
-  - name: github-mcp
   permissions:
   - scm:read
   - scm:write
@@ -19,4 +16,4 @@ spec:
   - issue:write
   requires:
     toolchains:
-    - gh@2.62
+    - gh@2.98
