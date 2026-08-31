@@ -1,0 +1,20 @@
+# BYO long-tail Toolchain manifests (ISI-3397).
+# Apply into your team namespace:
+#   kubectl apply -k toolchains/ -n <team-namespace>
+# Or use a kustomize namespace override in your own overlay:
+#   bases: [github.com/K8squad/k8squad-skills//toolchains]
+#   namespace: my-squad
+#
+# These are the long-tail tools NOT in the cluster default catalog.
+# The curated seven (kubectl, git, gh, go, node, dtctl, helm) plus
+# docker-cli/curl/make/… are installed cluster-wide by the admin via:
+#   helm install k8squad ... --set tools.defaultCatalog.enabled=true
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ripgrep.yaml
+- ast-grep.yaml
+- delve.yaml
+- golangci-lint.yaml
+- grpcurl.yaml
+- postgres-client.yaml

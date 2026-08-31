@@ -141,10 +141,10 @@ assembly uses):
 
 **BYO long-tail tools**: skills referencing tools outside the curated default
 catalog (`ripgrep`, `ast-grep`, `delve`, `golangci-lint`, `grpcurl`,
-`postgres-client`) are admitted only when your cluster defines the
-matching team-namespace `Toolchain` objects (no `rbac` block needed — the
-supported v1alpha1 long-tail path, ADR-043). Their `skill.yaml` pins are the
-tested versions, not catalog shipments.
+`postgres-client`) are admitted only when your cluster defines the matching
+team-namespace `Toolchain` objects (no `rbac` block — ADR-043 long-tail path).
+This repo ships ready-to-apply manifests under [`toolchains/`](toolchains/) —
+see [**Install long-tail Toolchains**](#install-long-tail-toolchains) below.
 
 ### SHA pinning (§5.3.6)
 
@@ -182,6 +182,36 @@ Skill authors instrument nothing. The platform emits:
 
 The OTelConfig watcher can toggle the pipeline at runtime; the default
 posture is emit.
+
+## Install long-tail Toolchains
+
+The skills in this catalog that use long-tail tools (`code-search`, `delve-pprof`,
+`golangci-lint`, `http-grpc-probe`, `psql-inspect`) require cluster-local `Toolchain`
+objects. This repo ships them under `toolchains/`. Two tiers:
+
+| Tier | Tools | How to install |
+|------|-------|----------------|
+| **Cluster default catalog** (admin, once) | `kubectl`, `git`, `gh`, `go`, `node`, `dtctl`, `docker-cli`, `curl`, `helm`, … | `helm install k8squad ... --set tools.defaultCatalog.enabled=true` |
+| **Long-tail BYO** (team namespace) | `ripgrep`, `ast-grep`, `delve`, `golangci-lint`, `grpcurl`, `postgres-client` | `kubectl apply -k toolchains/ -n <team-namespace>` |
+
+Apply the long-tail set into your team namespace:
+
+```sh
+kubectl apply -k toolchains/ -n <team-namespace>
+```
+
+Or reference via a kustomize remote in your own overlay:
+
+```yaml
+# kustomization.yaml
+bases:
+- github.com/K8squad/k8squad-skills//toolchains
+namespace: my-squad
+```
+
+Each manifest is a data-only `Toolchain` CR with no `rbac` block. The version
+pins in `toolchains/` exactly match what the skills declare in
+`requires.toolchains` — a mismatch fails Run admission fail-closed.
 
 ## Install
 

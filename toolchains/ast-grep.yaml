@@ -1,0 +1,12 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Toolchain
+metadata:
+  name: ast-grep
+  # namespace: <team-namespace>  set via: kubectl apply -k toolchains/ -n <team-namespace>
+  labels:
+    ksquad.io/catalog: long-tail
+spec:
+  versions:
+  - version: "0.38"
+    image: ghcr.io/k8squad/toolchains/ast-grep:0.38
+    provides: [ast-grep, sg]
