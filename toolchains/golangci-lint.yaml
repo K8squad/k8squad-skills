@@ -1,0 +1,12 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Toolchain
+metadata:
+  name: golangci-lint
+  # namespace: <team-namespace>  set via: kubectl apply -k toolchains/ -n <team-namespace>
+  labels:
+    ksquad.io/catalog: long-tail
+spec:
+  versions:
+  - version: "2.1"
+    image: ghcr.io/k8squad/toolchains/golangci-lint:2.1
+    provides: [golangci-lint]

@@ -1,0 +1,12 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Toolchain
+metadata:
+  name: delve
+  # namespace: <team-namespace>  set via: kubectl apply -k toolchains/ -n <team-namespace>
+  labels:
+    ksquad.io/catalog: long-tail
+spec:
+  versions:
+  - version: "1.24"
+    image: ghcr.io/k8squad/toolchains/delve:1.24
+    provides: [dlv]
