@@ -7,6 +7,10 @@ or data-exfiltration vector, so community PRs are held to a security review bar.
 
 Please read this before opening a PR.
 
+> Adding a **toolchain** (the versioned CLI packs a skill's
+> `requires.toolchains` resolves against) rather than a skill? See
+> [Adding a toolchain](docs/adding-a-toolchain.md).
+
 ## What a Skill is
 
 Each skill lives in `skills/<name>/`:
