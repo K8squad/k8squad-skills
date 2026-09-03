@@ -1,0 +1,19 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: task-io
+spec:
+  source:
+    type: git
+    git:
+      repoRef: github.com/K8squad/k8squad-skills
+      ref: bf3bc86b338d488fe751c289943db194ce8102c7
+      path: skills/task-io
+  permissions:
+  - issue:read
+  - issue:write
+  - task:status
+  # No `requires.toolchains`: the coord task-io API is plain HTTP reached over
+  # env-injected KSQUAD_COORD_URL + KSQUAD_COORD_TOKEN, so the skill client uses
+  # a runtime built-in (curl/HTTP) and needs no CLI pack. (Contrast `github`,
+  # which pins `gh@2.98`.)

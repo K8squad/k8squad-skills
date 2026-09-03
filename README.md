@@ -20,6 +20,7 @@ Each skill lives in its own directory under `skills/<name>/` with a `skill.yaml`
 
 | Skill | Focus | Purpose |
 |-------|-------|---------|
+| [`task-io`](skills/task-io) | platform | Read/write your **own** work item (get-task/post-comment/update-status/checkout) — union baseline, attached at every Role. |
 | [`bmad`](skills/bmad) | method | The BMAD phased-workflow method (inline). |
 | [`github`](skills/github) | dev | Remote git / PR / issue ops via the GitHub CLI (`gh`). |
 | [`dynatrace`](skills/dynatrace) | debug | Dynatrace control-plane (dtctl) for observability — agent body git-sourced from upstream `dynatrace-oss/dtctl`. |
