@@ -1,0 +1,65 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: social-stats
+spec:
+  source:
+    type: inline
+    inline: |
+      # social-stats — Collect & Report Social Engagement
+
+      Read engagement metrics for already-published posts across LinkedIn and X
+      and assemble a single, comparable report — through the granted `linkedin`
+      and `x` MCP servers. This skill is **read-only** and **holds no
+      credential**: each platform's token lives on its MCP server's
+      `credentialSecretRef`, projected per-Run as `KSQUAD_MCP_LINKEDIN_TOKEN` /
+      `KSQUAD_MCP_X_TOKEN`. A platform whose server/Secret is not provisioned is
+      simply skipped and flagged as "not configured" in the report.
+
+      ## Inputs
+
+      - **posts** — a list of `{platform, id_or_urn}` references to measure
+        (LinkedIn post URN, X tweet ID). Optionally a `since` date for a window.
+      - **window** (optional) — a reporting period label (e.g. "last 7 days").
+
+      ## Step 1 — Collect per platform
+
+      - For each LinkedIn post URN, call the `linkedin` MCP stats tool →
+        impressions, reactions, comments, shares, click-through.
+      - For each X tweet ID, call the `x` MCP stats tool → impressions, likes,
+        reposts, replies, bookmarks.
+      - If a platform's MCP tool is unavailable, record it as "not configured"
+        and continue — never fail the whole report over one missing platform.
+
+      ## Step 2 — Normalize
+
+      - Map each platform's native metrics onto a common shape:
+        `impressions`, `reactions` (likes+reactions), `comments`, `shares`
+        (reposts/shares), and `engagement_rate` = (reactions+comments+shares) /
+        impressions where impressions are available.
+
+      ## Step 3 — Report
+
+      Produce a compact table plus a short narrative:
+
+      - one row per post (platform, permalink, impressions, engagement, rate),
+      - a per-platform subtotal and a combined total,
+      - the top 1–3 posts by engagement rate,
+      - one line of plain-language insight (what over/under-performed and a
+        hypothesis), and the reporting window.
+
+      Save the report under `social-stats/{window}-report.md` when asked to
+      persist it.
+
+      ## Boundaries
+
+      - Read-only: never publish, edit, or delete a post (that is `x-publish` /
+        `linkedin-publish`).
+      - Never read, log, or transmit any `*_TOKEN` / Secret value.
+      - Report only what the granted MCP tools return; never scrape over raw
+        HTTP and never fabricate a metric an API did not provide.
+  mcpToolRefs:
+  - name: linkedin
+  - name: x
+  permissions:
+  - social:read

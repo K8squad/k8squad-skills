@@ -1,0 +1,66 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: linkedin-publish
+spec:
+  source:
+    type: inline
+    inline: |
+      # linkedin-publish — Post, Schedule & Measure on LinkedIn
+
+      Publish a prepared LinkedIn post (text + optional single asset), schedule
+      it for a future time, and read back basic engagement stats — all through
+      the granted `linkedin` MCP server. This skill **never embeds a
+      credential**: the LinkedIn OAuth token lives on the MCP server's
+      `credentialSecretRef` and the platform projects it per-Run as
+      `KSQUAD_MCP_LINKEDIN_TOKEN`. If that server or its Secret is not
+      provisioned, the skill's publish/stats actions are inert.
+
+      ## Inputs
+
+      - **body** — the post text (already written; use `social-repurpose` to
+        draft it). LinkedIn best practice: hook in the first 2–3 lines, body
+        under ~1,300 chars for a text post, link in the first comment.
+      - **asset** (optional) — a single image/document reference already present
+        in the Run; this skill does not generate media.
+      - **schedule** (optional) — an ISO-8601 timestamp; omit to publish now.
+      - **visibility** — `PUBLIC` (default) or `CONNECTIONS`.
+
+      ## Step 1 — Validate before sending
+
+      - Confirm the post body is final and within LinkedIn's limits.
+      - Confirm the target author (person or organization URN) with the user.
+      - **Publishing is outward-facing and hard to reverse — confirm with the
+        user before the first post of a session unless already authorized.**
+
+      ## Step 2 — Publish or schedule
+
+      - Call the `linkedin` MCP `create_post` (or `schedule_post`) tool with the
+        body, visibility, optional asset, and optional schedule time.
+      - If a link belongs with the post, post the share first, then add the link
+        as the first comment via the follow-up comment tool (LinkedIn
+        deprioritizes in-body links).
+
+      ## Step 3 — Confirm & record
+
+      - Capture the returned post URN / permalink and echo it to the user.
+      - Note the scheduled time if deferred.
+
+      ## Step 4 — Stats (on request)
+
+      - Call the `linkedin` MCP stats tool for a given post URN and report
+        impressions, reactions, comments, shares, and click-through where the
+        API exposes them. For a cross-platform roll-up, hand off to
+        `social-stats`.
+
+      ## Boundaries
+
+      - One post per explicit request; never auto-repost or bulk-post.
+      - Never read, log, or transmit `KSQUAD_MCP_LINKEDIN_TOKEN` or any Secret.
+      - Do not scrape LinkedIn over raw HTTP — all access is through the granted
+        MCP tools inside the operator-set permission envelope.
+  mcpToolRefs:
+  - name: linkedin
+  permissions:
+  - social:publish
+  - social:read

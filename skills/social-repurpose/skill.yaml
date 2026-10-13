@@ -1,0 +1,113 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: social-repurpose
+spec:
+  source:
+    type: inline
+    inline: |
+      # social-repurpose — Blog → Social / Script Adaptation
+
+      Transform one long-form source (a blog post, newsletter, or show-notes
+      doc) into platform-optimized derivatives: an X/Twitter thread, a LinkedIn
+      post, a YouTube/livestream script, a Reddit discussion post, and an email
+      newsletter excerpt. This is a **text-only** transformation skill — it reads
+      source text and writes derivative text. It never publishes, calls a social
+      API, or holds a credential; pair it with `x-publish` / `linkedin-publish`
+      when you actually want to post.
+
+      ## Step 1 — Read & extract
+
+      Read the source and pull out the reusable building blocks:
+
+      - **Title** — the original headline
+      - **Key insights (5–7)** — each a standalone, quotable statement
+      - **Statistics** — every sourced data point, kept with its attribution
+      - **Quotes** — notable expert statements
+      - **Main argument** — the central thesis in 1–2 sentences
+      - **TL;DR** — a 2–3 sentence summary that stands on its own
+      - **Audience & topic category** — drives tone, hashtags, subreddit choice
+
+      ## Step 2 — Pick targets
+
+      Ask which platforms to generate for unless the request already names one:
+
+      1. X/Twitter thread  2. LinkedIn post  3. YouTube / livestream script
+      4. Reddit discussion post  5. Email newsletter excerpt  6. All of the above
+
+      ## Step 3 — X/Twitter thread
+
+      - **Hook (1/):** curiosity gap or bold stat, <280 chars, stops the scroll.
+      - **Insight tweets (2/–6/):** one point each, standalone value, a sourced
+        stat where possible, line breaks for readability.
+      - **Close (final/):** one-sentence takeaway + a clear CTA to the full piece,
+        max 2 hashtags.
+      - Number tweets `1/`, `2/`, …; 7–9 tweets; none over 280 chars; tone
+        conversational, direct, insight-dense.
+
+      ## Step 4 — LinkedIn post
+
+      - **Length:** 800–1,200 words.
+      - **Opening (first 2–3 lines, pre-"see more"):** a story, observation, or
+        contrarian take — the hook. Never "I'm excited to share…".
+      - **Body:** LinkedIn-native formatting — bold for emphasis, 1–3 sentence
+        paragraphs, generous line breaks, numbered takeaways, 2–3 sourced stats,
+        more opinion-led than the source.
+      - **Close:** an engagement question. Keep external links out of the body
+        (put the link in the first comment, and say so in the output).
+      - **Tone:** professional but conversational, first-person.
+
+      ## Step 5 — YouTube / livestream script
+
+      - **Hook (0–15s):** bold statement or surprising question from the strongest
+        insight.
+      - **Intro (15–60s):** what the viewer will learn (3 bullets), why now,
+        a credibility line, `[SHOW TITLE CARD]`.
+      - **Main content (3–5 talking points):** derived from the source's H2s —
+        key point, supporting data, practical example. Add visual cues:
+        `[SHOW CHART: …]`, `[CUT TO SCREENCAST]`, `[B-ROLL: …]`,
+        `[TEXT ON SCREEN: …]`, with transitions between sections.
+      - **CTA (final 15–30s):** subscribe prompt with a reason, link to the full
+        piece in the description, tease the next topic.
+      - **Metadata:** estimated duration (~150 spoken words/min), a <60-char
+        keyword-rich title, a thumbnail concept, and a description with
+        timestamps and key takeaways.
+
+      ## Step 6 — Reddit post
+
+      - Suggest 2–3 relevant subreddits (size, rules, link-vs-text conventions).
+      - Title frames a question or observation, never a blog plug.
+      - Lead with the question, report findings peer-to-peer, use Reddit
+        markdown, include 3–5 sourced data points, close with a discussion
+        prompt. Honour the 10% self-promotion rule; link naturally at the end.
+      - **Tone:** humble, discussion-oriented, never salesy.
+
+      ## Step 7 — Email newsletter excerpt
+
+      - **Subject:** 40–60 chars, curiosity- or value-driven, not clickbait.
+      - **Preview text:** 40–90 chars that complement the subject.
+      - **Body:** TL;DR (2–3 sentences) + 3 bulleted takeaways (each a stat +
+        source) + one clear CTA. 150–200 words total, short paragraphs, one CTA.
+
+      ## Step 8 — Save & summarise
+
+      Write each output under `repurposed/` (create it if missing):
+
+          repurposed/{slug}-x-thread.md
+          repurposed/{slug}-linkedin-post.md
+          repurposed/{slug}-youtube-script.md
+          repurposed/{slug}-reddit-post.md
+          repurposed/{slug}-email-newsletter.md
+
+      Then print a summary: outputs written, key insights extracted, stats reused,
+      and next-step reminders (review for brand voice; schedule for peak hours;
+      hand off to `x-publish` / `linkedin-publish` to post).
+
+      ## Boundaries
+
+      - Transform text only. Do not fetch remote URLs, call a social API, or
+        read any credential — publishing is a separate, credential-gated skill.
+      - Preserve every statistic's source attribution; never invent numbers.
+  permissions:
+  - content:repurpose
+  - asset:write

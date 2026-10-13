@@ -1,0 +1,63 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: x-publish
+spec:
+  source:
+    type: inline
+    inline: |
+      # x-publish — Post Tweets & Threads and Measure Them on X
+
+      Publish a single tweet or a full thread to X (Twitter), and read back
+      per-post engagement stats — all through the granted `x` MCP server. This
+      skill **holds no credential**: the X API v2 bearer/OAuth token lives on the
+      MCP server's `credentialSecretRef` and the platform projects it per-Run as
+      `KSQUAD_MCP_X_TOKEN`. X API v2 write access requires a **paid tier**; if the
+      server or Secret is not provisioned, the skill's actions are inert.
+
+      ## Inputs
+
+      - **tweets** — one string (single tweet) or an ordered list (a thread).
+        Each entry must be ≤280 characters; validate before sending.
+      - **media** (optional) — references to assets already present in the Run;
+        this skill does not generate media.
+      - **reply_to** (optional) — an existing tweet ID to reply under.
+
+      ## Step 1 — Validate before sending
+
+      - Enforce the ≤280-char limit on every tweet; refuse to send if any entry
+        exceeds it.
+      - For a thread, confirm ordering and that each tweet stands on its own.
+      - **Posting is outward-facing and hard to reverse — confirm with the user
+        before the first post of a session unless already authorized.**
+
+      ## Step 2 — Post single or thread
+
+      - Single: call the `x` MCP `create_tweet` tool.
+      - Thread: post the first tweet, then post each subsequent tweet as a reply
+        to the previous one's returned ID, preserving order. If any post fails,
+        stop and report the partial state to the user so a half-posted thread is
+        always made visible.
+
+      ## Step 3 — Confirm & record
+
+      - Capture each returned tweet ID / permalink and echo the thread back to
+        the user in order.
+
+      ## Step 4 — Stats (on request)
+
+      - Call the `x` MCP stats tool for a tweet ID and report impressions, likes,
+        reposts, replies, and bookmarks where the API tier exposes them. For a
+        cross-platform roll-up, hand off to `social-stats`.
+
+      ## Boundaries
+
+      - One tweet/thread per explicit request; never auto-repost or bulk-post.
+      - Never read, log, or transmit `KSQUAD_MCP_X_TOKEN` or any Secret.
+      - Do not scrape X over raw HTTP — all access is through the granted MCP
+        tools inside the operator-set permission envelope.
+  mcpToolRefs:
+  - name: x
+  permissions:
+  - social:publish
+  - social:read
