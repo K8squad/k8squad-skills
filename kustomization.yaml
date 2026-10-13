@@ -20,3 +20,10 @@ resources:
 - skills/delve-pprof/skill.yaml
 - skills/psql-inspect/skill.yaml
 - skills/http-grpc-probe/skill.yaml
+# Social category (ISI-5774). social-repurpose is text-only and ships now.
+- skills/social-repurpose/skill.yaml
+# linkedin-publish / x-publish / social-stats are authored but intentionally
+# NOT listed here: their mcpToolRefs ([linkedin]/[x]) are dangling until the
+# board provisions the LinkedIn + X API MCPServers and credential Secrets, and a
+# dangling ref rejects the Skill at admission. Wire them in (WS-8) once the
+# go-live gate clears (ISI-5774 §7 decision #3; unblock owner = BOARD/Henrik).
