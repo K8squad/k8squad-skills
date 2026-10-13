@@ -1,0 +1,88 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: image-gen
+spec:
+  source:
+    type: inline
+    inline: |
+      # image-gen — Generate & Edit Images for Content
+
+      Produce blog-quality imagery — hero images, inline illustrations, social
+      preview / Open Graph cards — and edit existing images, through a granted
+      image-generation MCP server (Gemini for editorial/illustration work, or
+      fal.ai / FLUX for photoreal and typographic control). This skill **never
+      embeds a credential**: the provider token lives on the MCP server's
+      `credentialSecretRef` and the platform projects it per-Run as an env var
+      (e.g. `KSQUAD_MCP_GEMINI_TOKEN` / `KSQUAD_MCP_FAL_TOKEN`). If no image
+      provider is provisioned, the skill's generation actions are inert.
+
+      ## Role — you are the creative director
+
+      Do not pass the user's words straight to the model. Interpret intent, pick
+      a domain mode, and construct a prompt from six components:
+
+      **Subject + Action + Context + Composition + Lighting + Style.**
+
+      Domain modes: **Editorial** (conceptual hero), **Product** (clean studio),
+      **Landscape/Scene**, **UI/Web** (mockups, device frames), **Infographic**
+      (labelled, flat), **Abstract** (texture/gradient backgrounds). Choose the
+      mode from the placement before writing the prompt.
+
+      ## Step 1 — Clarify the brief
+
+      - **Placement** — hero (wide 16:9 / 1200×630 OG), inline illustration
+        (4:3), social card (1:1 or 1200×630), or an edit of an existing asset.
+      - **Message** — the single idea the image must convey.
+      - **Brand** — palette and tone to honour; avoid literal logos/trademarks.
+      - **Constraints** — no text-in-image unless explicitly asked (models mangle
+        long text — overlay real text in post for OG cards instead).
+
+      ## Step 2 — Construct the prompt
+
+      - Lead with the subject and the concept, then layer context, composition
+        (rule of thirds, focal point, negative space for text overlay),
+        lighting, and a named style. Be specific; avoid vague adjectives.
+      - For **FLUX/fal.ai**, exploit its typography and hex-color strength when
+        precise brand color or short on-image text is required; for **Gemini**,
+        lean on editorial/illustrative concepts and multi-reference editing.
+      - State aspect ratio and resolution explicitly for the placement.
+
+      ## Step 3 — Generate
+
+      - Call the granted image MCP tool with the constructed prompt, aspect
+        ratio, and (for edits) the reference image already present in the Run.
+      - Generate 1–3 variants for a hero; review for artifacts (hands, warped
+        text, extra limbs) before accepting.
+
+      ## Step 4 — Compose the OG / social card
+
+      When the deliverable is an OG card, generate the background art only, then
+      overlay real title text locally so it stays crisp and legible — the
+      `node@22` toolchain (cluster default catalog) renders the text layer onto
+      the art. Target 1200×630 with a safe margin and AA-contrast text.
+
+      ## Step 5 — Save & report
+
+      - Write to `images/{slug}-{placement}.{png|webp}` (create `images/` if
+        missing). Include descriptive, accessible alt text for every asset.
+      - Print a summary: placement, provider/model used, prompt rationale,
+        variants kept, and output paths.
+
+      ## Boundaries
+
+      - One deliverable per explicit request; no bulk generation.
+      - Never read, log, or transmit any projected provider token.
+      - All model access is through the granted MCP tools inside the
+        operator-set permission envelope — no raw provider HTTP calls.
+      - Respect brand/IP: no real logos, no copyrighted-character mimicry, no
+        real public figures.
+  mcpToolRefs:
+  - name: gemini-image
+  - name: fal
+  permissions:
+  - image:generate
+  - asset:write
+  requires:
+    toolchains:
+    - node@22

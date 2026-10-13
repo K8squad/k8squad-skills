@@ -1,0 +1,92 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: slides-deck
+spec:
+  source:
+    type: inline
+    inline: |
+      # slides-deck — Author & Export Presentation Decks
+
+      Turn an outline, blog post, or set of talking points into a presentation
+      deck and export it to PPTX and PDF. The authoring surface is Markdown
+      (Marp): one Markdown file is the single source of truth, rendered to
+      slides by the `marp` toolchain; PDF is produced the same way. The skill
+      writes local files only — it holds no credential and makes no network
+      call.
+
+      ## Step 1 — Shape the narrative
+
+      Decks are not documents. Build an arc, not a wall of text:
+
+      - **Title + agenda** (1 slide each).
+      - **One idea per slide** — a short headline is the assertion; the body is
+        the evidence. Aim for ≤6 lines or ≤3 bullets; never a paragraph.
+      - **Section dividers** between acts so the audience can track structure.
+      - **A closing slide** — the single takeaway + a call to action.
+      - Prefer a chart or diagram over a bullet list where the point is a
+        trend or comparison — hand off to `dataviz` for the SVG, then embed it.
+
+      ## Step 2 — Author in Marp Markdown
+
+      Write `deck.md` with Marp front-matter and `---` slide separators:
+
+          ---
+          marp: true
+          theme: default
+          paginate: true
+          ---
+          # Deck Title
+          Subtitle · Author · Date
+          ---
+          ## One assertion per slide
+          - evidence
+          - evidence
+          ---
+
+      Conventions: use `##` as the per-slide headline; keep speaker detail in
+      HTML comments (`<!-- notes -->`) so it exports as presenter notes; embed
+      images/charts with relative paths (`![](charts/latency.svg)`); set a theme
+      once in front-matter rather than styling slides individually.
+
+      ## Step 3 — Export
+
+      Render with the `marp` toolchain (CLI on `PATH`, no RBAC):
+
+          marp deck.md --pptx -o deck.pptx     # editable PowerPoint
+          marp deck.md --pdf  -o deck.pdf      # print / share
+          marp deck.md --html -o deck.html     # web preview
+
+      For a PDF that needs richer typesetting than Marp offers (dense tables,
+      footnotes), the `pandoc` toolchain (provides `pandoc`, `weasyprint`,
+      `typst`) is an alternative export path from the same Markdown.
+
+      ## Step 4 — Verify & save
+
+      - Confirm the export opens: slide count matches the source `---` count,
+        embedded charts resolved (no broken-image boxes), presenter notes
+        carried into the PPTX notes pane.
+      - Write outputs under `decks/{slug}/` (`deck.md`, `deck.pptx`, `deck.pdf`).
+      - Print a summary: slide count, export formats produced, any assets
+        embedded, and the output paths.
+
+      ## Google Slides (optional)
+
+      When the target is Google Slides rather than PPTX, author the same Marp
+      Markdown, export `deck.pptx`, and import that file into Google Slides —
+      PPTX import preserves layout and speaker notes. A direct Slides API path
+      is out of scope here (it would need a credentialed MCP server, which this
+      skill does not carry).
+
+      ## Boundaries
+
+      - Deterministic rendering only — no image/voice generation (pair with
+        `image-gen` / `dataviz` for media, then embed).
+      - Write local files only; no publishing or remote upload.
+  permissions:
+  - slides:render
+  - asset:write
+  requires:
+    toolchains:
+    - marp@4
+    - pandoc@3
