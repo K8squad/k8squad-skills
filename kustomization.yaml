@@ -20,6 +20,10 @@ resources:
 - skills/delve-pprof/skill.yaml
 - skills/psql-inspect/skill.yaml
 - skills/http-grpc-probe/skill.yaml
+# Observability / SRE — skill category expansion (ISI-5754 §3.5, ISI-5772).
+# bluebox drives the bluebox CLI; its bluebox-cli toolchain CR ships in
+# toolchains/ (ISI-5768). Image ghcr.io/k8squad/toolchains/bluebox-cli:1.
+- skills/bluebox/skill.yaml
 # Social category (ISI-5774). social-repurpose is text-only and ships now.
 - skills/social-repurpose/skill.yaml
 # linkedin-publish / x-publish / social-stats are authored but intentionally
