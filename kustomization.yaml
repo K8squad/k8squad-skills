@@ -35,6 +35,16 @@ resources:
 - skills/vuln-scan/skill.yaml
 - skills/iac-scan/skill.yaml
 - skills/security-review/skill.yaml
+# Content category (ISI-5771). The four text-only / toolchain skills ship now.
+- skills/blog-engine/skill.yaml
+- skills/doc-convert/skill.yaml
+- skills/youtube-storyboard/skill.yaml
+- skills/tech-docs/skill.yaml
+# blog-publish is authored but intentionally NOT listed here: its mcpToolRef
+# ([blog-platform]) is dangling until the board provisions the blog-platform
+# MCPServer + credential Secret, and a dangling ref rejects the Skill at
+# admission. Wire it in (WS-8, ISI-5775) once the go-live gate clears
+# (ISI-5754 §7; unblock owner = BOARD/Henrik).
 # linkedin-publish / x-publish / social-stats are authored but intentionally
 # NOT listed here: their mcpToolRefs ([linkedin]/[x]) are dangling until the
 # board provisions the LinkedIn + X API MCPServers and credential Secrets, and a

@@ -1,0 +1,69 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: blog-publish
+spec:
+  source:
+    type: inline
+    inline: |
+      # blog-publish — Publish to WordPress / Ghost / Hashnode / Medium
+
+      Publish or update a prepared article on a blogging platform through the
+      granted `blog-platform` MCP server, then read back basic post metadata.
+      This skill **never embeds a credential**: the platform API token lives on
+      the MCP server's `credentialSecretRef` and the platform projects it
+      per-Run as `KSQUAD_MCP_BLOG_PLATFORM_TOKEN`. Until the board provisions
+      that MCP server and its Secret, the skill's publish actions are inert.
+
+      ## Inputs
+
+      - **article** — the finished post body (Markdown or HTML) plus front
+        matter: title, slug, tags, canonical URL. Draft it with `blog-engine`.
+      - **platform** — `wordpress`, `ghost`, `hashnode`, or `medium`; the MCP
+        server routes to the matching API.
+      - **status** — `draft` (default) or `publish`. Default to `draft` so a
+        human reviews in the platform's editor before it goes live.
+      - **cover** (optional) — a single image reference already in the Run; this
+        skill does not generate media.
+
+      ## Step 1 — Validate before sending
+
+      - Confirm the body is final, the slug and canonical URL are correct, and
+        tags exist on the target platform.
+      - Confirm the target blog/publication with the user.
+      - **Publishing is outward-facing and hard to reverse. Confirm with the
+        user before the first publish of a session unless already authorized,
+        and default `status` to `draft`.**
+
+      ## Step 2 — Publish or update
+
+      - Call the `blog-platform` MCP `create_post` (or `update_post` when a post
+        id is supplied) tool with the body, front matter, status, and optional
+        cover. Pass `canonical_url` so cross-posts attribute the original.
+      - For an update, fetch the current post first and preserve fields the
+        request does not change.
+
+      ## Step 3 — Confirm & record
+
+      - Capture the returned post id and URL and echo them to the user.
+      - If published as a draft, report the editor link and remind the user to
+        review and publish from the platform.
+
+      ## Step 4 — Metadata (on request)
+
+      - Call the `blog-platform` MCP read tool for a post id and report status,
+        publish date, and URL. For engagement analytics, defer to the
+        platform's own dashboard.
+
+      ## Boundaries
+
+      - One post per explicit request; never auto-publish or bulk-post.
+      - Treat `KSQUAD_MCP_BLOG_PLATFORM_TOKEN` and every Secret as read-never:
+        do not print, log, or transmit it anywhere.
+      - Do not post to a platform over raw HTTP — all access is through the
+        granted MCP tools inside the operator-set permission envelope.
+  mcpToolRefs:
+  - name: blog-platform
+  permissions:
+  - content:publish
+  - content:read
