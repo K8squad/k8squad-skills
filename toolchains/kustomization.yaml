@@ -12,9 +12,28 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+# Dev / debug (ISI-3397)
 - ripgrep.yaml
 - ast-grep.yaml
 - delve.yaml
 - golangci-lint.yaml
 - grpcurl.yaml
 - postgres-client.yaml
+# Ops / IaC — skill category expansion (ISI-5754 §3.1, images ISI-5768)
+- clusterctl.yaml
+- terraform.yaml
+- ansible-core.yaml
+- proxmox-cli.yaml
+# Bluebox (ISI-5754 §3.5)
+- bluebox-cli.yaml
+# Security scanners (ISI-5754 §3.6)
+- semgrep.yaml
+- gitleaks.yaml
+- trivy.yaml
+- grype.yaml
+- checkov.yaml
+# Graphic design (ISI-5754 §3.2)
+- ffmpeg.yaml
+- marp.yaml
+# Content writing (ISI-5754 §3.3)
+- pandoc.yaml
