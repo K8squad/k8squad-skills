@@ -133,14 +133,19 @@ only one:
 
 - **Toolchains** (`requires.toolchains`, §5.3.2) — a CLI pack staged as an
   init container, e.g. `gh@2.98`, `dtctl@1.0`, `node@22`. This is the path
-  **every skill in this catalog uses**: `github` drives `gh`, `dynatrace`/
+  **most skills in this catalog use**: `github` drives `gh`, `dynatrace`/
   `otel-observability-query` drive `dtctl`, `graphical` drives `node`. A CLI
-  tool does not need an MCPServer.
+  tool does not need an MCPServer. (A handful of skills — `security-review`,
+  `blog-engine`, `tech-docs`, `social-repurpose`, `youtube-storyboard` — are
+  text-only and need neither path.)
 - **`mcpToolRefs` → `MCPServer`** — for a network tool surface reachable
   **only over MCP** (a hosted service that speaks the protocol, not a CLI).
-  No catalog skill currently needs this, but the platform supports it and the
-  semantics are documented below so authors of MCP-backed skills know the
-  rules.
+  The _(gated)_ Design / Content / Social skills (`image-gen`, `video-gen`,
+  `audio-music`, `blog-publish`, `linkedin-publish`, `x-publish`,
+  `social-stats`) take this path — they are authored but held out of
+  `kustomization.yaml` until the board provisions their `MCPServer` +
+  credential `Secret`, because a dangling ref rejects the Skill at admission
+  (see the gated note in the catalog above).
 
 ### `mcpToolRefs` → `MCPServer` (ADR-042)
 
