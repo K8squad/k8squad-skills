@@ -7,34 +7,58 @@ vector. This scanner statically inspects skill manifests and their markdown bodi
 and emits GitHub-Actions annotations, classifying findings as:
 
   HIGH   -> blocks the PR (must be removed or justified by a maintainer edit)
-  MEDIUM -> requires human security sign-off (a maintainer applies the
-            `skill-security-reviewed` label to merge)
+  MEDIUM -> requires human security sign-off ONCE per skill content revision,
+            recorded persistently in .github/security/reviewed-skills.txt
+            (fast path: a maintainer applies the `skill-security-reviewed` label).
 
 It is deliberately STATIC: it parses YAML/markdown as data and NEVER executes any
 skill payload, so it is safe to run against untrusted fork PRs on a GitHub-hosted
 runner with a read-only token and no secrets.
 
+## Persistent MEDIUM sign-off baseline (ISI-5790)
+
+A MEDIUM finding (privileged sidecar, exec:docker, unpinned git ref, egress to a
+new host) means "a human must look once". Historically the only record of that
+sign-off was the per-PR `skill-security-reviewed` label — ephemeral, so already
+reviewed skills (e.g. container-build, go-build-test) RE-TRIPPED the gate on
+every unrelated PR and blocked all skill-authoring work.
+
+`.github/security/reviewed-skills.txt` is a durable record of those sign-offs,
+keyed by `<skill-dir> <content-hash>`. The content hash covers EVERY file under
+`skills/<name>/`, so any edit to a reviewed skill changes its hash and the
+sign-off is re-demanded. A MEDIUM finding whose owning skill is recorded in the
+baseline at its CURRENT hash is treated as already-reviewed and does NOT count
+toward the `medium` total the workflow blocks on. HIGH findings are NEVER
+baselined — they always block. A NEW or CHANGED skill with a MEDIUM finding is
+not in the baseline (hash miss) and still blocks until signed off.
+
 Usage:
-    skill_security_scan.py [ROOT]        # scan ROOT/skills (default: cwd)
+    skill_security_scan.py [ROOT]            # scan ROOT/skills (default: cwd)
+    skill_security_scan.py --emit-baseline [ROOT]
+                                             # print reviewed-skills.txt lines for
+                                             # every skill currently carrying a
+                                             # MEDIUM finding (records a sign-off)
 
 Outputs:
-  - GitHub annotations on stdout (::error / ::warning)
+  - GitHub annotations on stdout (::error / ::warning / ::notice)
   - a human summary to $GITHUB_STEP_SUMMARY (if set)
-  - high=<n> / medium=<n> to $GITHUB_OUTPUT (if set)
+  - high=<n> / medium=<n> to $GITHUB_OUTPUT (if set); `medium` EXCLUDES findings
+    acknowledged by the reviewed-skills baseline
   - findings.json next to this script's CWD when --json is given
 
 Always exits 0 (report-only); the workflow decides pass/fail from the counts so
-the MEDIUM sign-off label can be honored. Pass --strict-exit for local use
-(exit 2 on HIGH, 3 on MEDIUM) — used by the self-test.
+the MEDIUM sign-off can be honored. Pass --strict-exit for local use (exit 2 on
+HIGH, 3 on un-baselined MEDIUM) — used by the self-test.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 
@@ -144,6 +168,11 @@ class Finding:
     rule: str
     title: str
     message: str
+    # Set True when this MEDIUM finding's owning skill is recorded in the
+    # reviewed-skills baseline at its current content hash (human already signed
+    # off; does not count toward the blocking `medium` total). HIGH is never
+    # baselined.
+    baselined: bool = False
 
 
 @dataclass
@@ -159,7 +188,15 @@ class Report:
 
     @property
     def medium(self) -> int:
-        return sum(1 for f in self.findings if f.severity == MEDIUM)
+        """Un-baselined MEDIUM findings — the count the PR gate blocks on."""
+        return sum(1 for f in self.findings
+                   if f.severity == MEDIUM and not f.baselined)
+
+    @property
+    def medium_reviewed(self) -> int:
+        """MEDIUM findings acknowledged by the reviewed-skills baseline."""
+        return sum(1 for f in self.findings
+                   if f.severity == MEDIUM and f.baselined)
 
 
 def _line_of(text: str, idx: int) -> int:
@@ -180,6 +217,100 @@ def load_allowlist(root: Path) -> list[str]:
 def host_allowed(host: str, allow: list[str]) -> bool:
     host = host.lower().rstrip(".")
     return any(host == a or host.endswith("." + a) for a in allow)
+
+
+# --- Reviewed-skills baseline (persistent MEDIUM sign-off, ISI-5790) -----------
+REVIEWED_BASELINE = PurePosixPath(".github/security/reviewed-skills.txt")
+
+
+def skill_dir_of(file_rel: str) -> str | None:
+    """Return the owning `skills/<name>` dir for a finding's repo-relative file.
+
+    All scanned content lives under skills/<name>/; a finding on
+    skills/foo/bar.md or skills/foo/skill.yaml both belong to skill `skills/foo`.
+    """
+    parts = PurePosixPath(file_rel).parts
+    if len(parts) >= 2 and parts[0] == "skills":
+        return str(PurePosixPath(parts[0], parts[1]))
+    return None
+
+
+def skill_content_hash(root: Path, skill_dir_rel: str) -> str:
+    """SHA-256 over EVERY regular file under skills/<name>/ (path + bytes).
+
+    Hashing the whole directory — not just skill.yaml — means adding or editing
+    any aux file (README, *.sh, *.py dropped beside the manifest) changes the
+    hash and re-demands sign-off, closing the F4 aux-file coverage gap for the
+    baseline. Deterministic: entries sorted by POSIX relpath.
+    """
+    base = root / skill_dir_rel
+    h = hashlib.sha256()
+    if not base.is_dir():
+        return h.hexdigest()
+    files = sorted((p for p in base.rglob("*") if p.is_file()),
+                   key=lambda p: p.relative_to(base).as_posix())
+    for p in files:
+        rel = p.relative_to(base).as_posix()
+        h.update(rel.encode("utf-8"))
+        h.update(b"\0")
+        h.update(p.read_bytes())
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def load_reviewed(root: Path) -> set[tuple[str, str]]:
+    """Parse reviewed-skills.txt into a set of (skill-dir, content-hash) pairs.
+
+    Line format: `<skill-dir> <sha256-hex>   # optional note`. Blank lines and
+    `#` comments are ignored. A sign-off matches only when BOTH the skill dir
+    and its current content hash are present — an edited skill (new hash) is not
+    matched, so its MEDIUM finding re-blocks until re-reviewed.
+    """
+    f = root / ".github" / "security" / "reviewed-skills.txt"
+    out: set[tuple[str, str]] = set()
+    if not f.exists():
+        return out
+    for raw in f.read_text().splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        cols = line.split()
+        if len(cols) >= 2:
+            out.add((cols[0].rstrip("/"), cols[1].lower()))
+    return out
+
+
+def apply_baseline(root: Path, rep: Report) -> None:
+    """Mark MEDIUM findings whose owning skill is recorded at its current hash."""
+    reviewed = load_reviewed(root)
+    if not reviewed:
+        return
+    hashes: dict[str, str] = {}
+    for f in rep.findings:
+        if f.severity != MEDIUM:
+            continue
+        sd = skill_dir_of(f.file)
+        if sd is None:
+            continue
+        if sd not in hashes:
+            hashes[sd] = skill_content_hash(root, sd)
+        if (sd, hashes[sd]) in reviewed:
+            f.baselined = True
+
+
+def baseline_lines(root: Path, rep: Report) -> list[str]:
+    """`<skill-dir> <hash>` lines for every skill carrying a MEDIUM finding.
+
+    Used by --emit-baseline so a maintainer can record a sign-off after review.
+    """
+    dirs: dict[str, None] = {}
+    for f in rep.findings:
+        if f.severity != MEDIUM:
+            continue
+        sd = skill_dir_of(f.file)
+        if sd is not None:
+            dirs[sd] = None
+    return [f"{sd} {skill_content_hash(root, sd)}" for sd in sorted(dirs)]
 
 
 # Capture the REAL host: skip any `userinfo@` authority prefix so
@@ -291,15 +422,23 @@ def run(root: Path) -> Report:
     for b in bodies:
         # markdown under skills/ is a git-source body the agent reads → scan it
         scan_text(rep, str(b.relative_to(root)), b.read_text(errors="replace"), allow)
+    apply_baseline(root, rep)
     return rep
 
 
 def emit_annotations(rep: Report) -> None:
     for f in rep.findings:
-        level = "error" if f.severity == HIGH else "warning"
-        title = f"[{f.severity}] {f.title}"
+        if f.severity == HIGH:
+            level = "error"
+        elif f.baselined:
+            # Already signed off in the reviewed-skills baseline → informational.
+            level = "notice"
+        else:
+            level = "warning"
+        suffix = " [reviewed: acknowledged by reviewed-skills.txt]" if f.baselined else ""
+        title = f"[{f.severity}] {f.title}{suffix}"
         # newlines in annotation messages must be escaped for the workflow command
-        msg = f.message.replace("\n", " ")
+        msg = f.message.replace("\n", " ") + suffix
         print(f"::{level} file={f.file},line={f.line},title={title}::{msg}")
 
 
@@ -309,17 +448,31 @@ def write_summary(rep: Report) -> None:
     if not rep.findings:
         lines.append("✅ No security findings.")
     else:
-        lines.append(f"**{rep.high} HIGH** · **{rep.medium} MEDIUM**")
-        lines += ["", "| Severity | Rule | File:Line | Finding |",
-                  "|---|---|---|---|"]
-        for f in sorted(rep.findings, key=lambda x: (x.severity != HIGH, x.file)):
-            lines.append(f"| {f.severity} | `{f.rule}` | `{f.file}:{f.line}` | {f.title} |")
+        hdr = f"**{rep.high} HIGH** · **{rep.medium} MEDIUM**"
+        if rep.medium_reviewed:
+            hdr += f" · _{rep.medium_reviewed} MEDIUM already reviewed (baseline)_"
+        lines.append(hdr)
+        lines += ["", "| Severity | Rule | File:Line | Finding | Status |",
+                  "|---|---|---|---|---|"]
+        for f in sorted(rep.findings,
+                        key=lambda x: (x.severity != HIGH, x.baselined, x.file)):
+            status = "✅ reviewed (baseline)" if f.baselined else "needs action"
+            lines.append(
+                f"| {f.severity} | `{f.rule}` | `{f.file}:{f.line}` | {f.title} | {status} |")
         if rep.high:
             lines += ["", "❌ HIGH findings block this PR. Remove the offending "
                       "content or a maintainer must edit the submission."]
         if rep.medium:
-            lines += ["", "⚠️ MEDIUM findings require a maintainer to review and "
-                      "apply the `skill-security-reviewed` label before merge."]
+            lines += ["", "⚠️ Un-baselined MEDIUM findings require human security "
+                      "sign-off before merge: a maintainer either applies the "
+                      "`skill-security-reviewed` label (fast path) or records the "
+                      "sign-off persistently by adding the skill to "
+                      "`.github/security/reviewed-skills.txt` "
+                      "(`skill_security_scan.py --emit-baseline .`)."]
+        if rep.medium_reviewed and not rep.medium:
+            lines += ["", "ℹ️ All MEDIUM findings are on skills already signed off "
+                      "in `.github/security/reviewed-skills.txt` at their current "
+                      "content — no per-PR action needed."]
     body = "\n".join(lines) + "\n"
     if path:
         with open(path, "a") as fh:
@@ -337,9 +490,23 @@ def write_outputs(rep: Report) -> None:
 
 def main(argv: list[str]) -> int:
     strict = "--strict-exit" in argv
+    emit = "--emit-baseline" in argv
     args = [a for a in argv[1:] if not a.startswith("-")]
     root = Path(args[0]).resolve() if args else Path.cwd()
     rep = run(root)
+    if emit:
+        # Print reviewed-skills.txt lines for every skill currently carrying a
+        # MEDIUM finding. A maintainer reviews the skill(s), then commits these
+        # lines to .github/security/reviewed-skills.txt to record the sign-off.
+        lines = baseline_lines(root, rep)
+        if not lines:
+            print("# No skills currently carry a MEDIUM finding — nothing to baseline.")
+        else:
+            print("# Generated by skill_security_scan.py --emit-baseline")
+            print("# Review each skill before committing; a line records a human sign-off.")
+            for ln in lines:
+                print(ln)
+        return 0
     emit_annotations(rep)
     write_summary(rep)
     write_outputs(rep)
