@@ -1,0 +1,12 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Toolchain
+metadata:
+  name: ffmpeg
+  # namespace: <team-namespace>  set via: kubectl apply -k toolchains/ -n <team-namespace>
+  labels:
+    ksquad.io/catalog: long-tail
+spec:
+  versions:
+  - version: "7"
+    image: ghcr.io/k8squad/toolchains/ffmpeg:7
+    provides: [ffmpeg, ffprobe]

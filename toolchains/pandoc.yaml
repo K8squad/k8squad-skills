@@ -1,0 +1,12 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Toolchain
+metadata:
+  name: pandoc
+  # namespace: <team-namespace>  set via: kubectl apply -k toolchains/ -n <team-namespace>
+  labels:
+    ksquad.io/catalog: long-tail
+spec:
+  versions:
+  - version: "3"
+    image: ghcr.io/k8squad/toolchains/pandoc:3
+    provides: [pandoc, weasyprint, typst]

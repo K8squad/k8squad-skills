@@ -1,0 +1,12 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Toolchain
+metadata:
+  name: ansible-core
+  # namespace: <team-namespace>  set via: kubectl apply -k toolchains/ -n <team-namespace>
+  labels:
+    ksquad.io/catalog: long-tail
+spec:
+  versions:
+  - version: "2.17"
+    image: ghcr.io/k8squad/toolchains/ansible-core:2.17
+    provides: [ansible, ansible-playbook, ansible-galaxy, ansible-config, ansible-inventory]
