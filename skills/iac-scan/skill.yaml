@@ -1,0 +1,57 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: iac-scan
+spec:
+  source:
+    type: inline
+    inline: |
+      # iac-scan
+
+      Infrastructure-as-code and Kubernetes misconfiguration scanning with
+      checkov and kube-bench. Catch insecure Terraform, Helm, and manifest
+      defaults — open security groups, public buckets, missing encryption,
+      over-broad RBAC, privileged pods — and benchmark a cluster against CIS
+      hardening before it ships. Pairs with the Ops/IaC skills (WS-2).
+
+      ## When to use
+      - Reviewing a PR that adds or changes Terraform, Helm charts, or
+        Kubernetes manifests.
+      - Hardening a workload cluster against the CIS Kubernetes Benchmark.
+
+      ## How to run
+      Scan IaC definitions (checkov) over Terraform, Helm, and manifests:
+
+          checkov --directory . --compact --output json --output-file-path checkov.json
+
+      Narrow the framework when a repo mixes types, e.g.
+      `--framework terraform`, `--framework helm`, or
+      `--framework kubernetes`. Honor an in-repo `.checkov.yaml` and any
+      documented skip-check entries; do not disable a check to clear a
+      finding without a recorded reason.
+
+      Benchmark a running cluster against CIS (kube-bench) from a context
+      with node/API access:
+
+          kube-bench run --json > kube-bench.json
+
+      ## Triage
+      - Rank by blast radius: a public data store or a cluster-admin binding
+        outranks a cosmetic lint. Fix the manifest/module at the source.
+      - For an intentional deviation, record a scoped skip (checkov
+        `skip_check` with a comment, or a documented kube-bench exception)
+        and surface it in review rather than removing the control.
+      - Report the remaining failed controls with their severity so the
+        operator can accept or remediate.
+
+      ## Boundaries
+      - checkov is read-only over the source tree. kube-bench reads cluster
+        and node state read-only; it changes nothing. Pairs with sast-scan,
+        secret-scan, vuln-scan, and security-review.
+  permissions:
+  - fs:read
+  - exec:checkov
+  - exec:kube-bench
+  requires:
+    toolchains:
+    - checkov@3

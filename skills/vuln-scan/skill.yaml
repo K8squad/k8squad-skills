@@ -1,0 +1,58 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: vuln-scan
+spec:
+  source:
+    type: inline
+    inline: |
+      # vuln-scan
+
+      Container-image and filesystem CVE scanning with trivy and grype.
+      Find vulnerable OS packages and language dependencies in an image or
+      a source tree so they are patched before release — the vulnerability
+      gate DevOps/Reviewer run on build artifacts and lockfiles.
+
+      ## When to use
+      - Before publishing or promoting a container image.
+      - When a dependency is added or bumped, or a new CVE advisory lands and
+        you need to know whether this repo is exposed.
+
+      ## How to run
+      Scan a built image for OS + language CVEs (trivy):
+
+          trivy image --severity HIGH,CRITICAL --format json --output trivy.json ghcr.io/k8squad/<image>:<tag>
+
+      Scan the source tree / lockfiles for dependency CVEs (trivy fs):
+
+          trivy fs --scanners vuln --severity HIGH,CRITICAL --format json --output trivy-fs.json .
+
+      Cross-check an image with a second engine (grype) when a finding needs
+      corroboration or an SBOM-driven view:
+
+          grype ghcr.io/k8squad/<image>:<tag> --output json --file grype.json
+
+      Honor the repo's `.trivyignore` — it carries reviewed, time-boxed
+      waivers with expiry dates. Do not add a new ignore to clear a finding
+      without confirming the in-repo dependency is actually pinned safe;
+      a lapsed or unjustified ignore reddens the whole fleet.
+
+      ## Triage
+      - Prioritize HIGH/CRITICAL with a fixed version available — those are
+        actionable now: bump the dependency or base image.
+      - Distinguish a CVE in a path the code actually reaches from one in an
+        unused transitive dependency; note the distinction in the report.
+      - For an unavoidable finding (no fix yet), add a `.trivyignore` entry
+        with the CVE id, a one-line justification, and an expiry date.
+
+      ## Boundaries
+      - Read-only against images and the source tree. Pairs with sast-scan,
+        secret-scan, iac-scan, and security-review.
+  permissions:
+  - fs:read
+  - exec:trivy
+  - exec:grype
+  requires:
+    toolchains:
+    - trivy@0.58
+    - grype@0.87

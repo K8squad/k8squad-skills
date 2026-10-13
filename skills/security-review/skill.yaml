@@ -1,0 +1,63 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: security-review
+spec:
+  source:
+    type: inline
+    inline: |
+      # security-review
+
+      A guided threat-model and security review for a change or a feature.
+      Text-only reasoning — no scanner, no toolchain. Use this to think like
+      an attacker about a diff and to decide what the scanner skills
+      (sast-scan, secret-scan, vuln-scan, iac-scan) should then confirm.
+
+      ## When to use
+      - Reviewing a PR that changes a trust boundary: authn/authz, request
+        parsing, file/path handling, templating, deserialization, crypto,
+        secret handling, inter-service calls, or RBAC/Kubernetes permissions.
+      - Designing a new feature and wanting a lightweight threat model before
+        code exists.
+
+      ## Method
+      Work through these, grounded in the actual diff — not generically:
+
+      1. **Assets & trust boundaries.** What data and capabilities does this
+         touch? Where does untrusted input cross into trusted code? Draw the
+         boundary explicitly.
+      2. **Entry points.** Enumerate every input: request fields, headers,
+         query params, env, files, message-queue payloads, CRD/spec fields.
+      3. **STRIDE pass.** For each boundary ask: Spoofing (is the caller who
+         they claim?), Tampering (can input alter state it should not?),
+         Repudiation (is the action attributable?), Information disclosure
+         (does an error or response leak data?), Denial of service (is there
+         an unbounded loop/alloc/retry?), Elevation of privilege (can a user
+         gain a capability they lack?).
+      4. **Authz, not just authn.** Confirm the change checks *authorization*
+         on the specific resource, not merely that the caller is logged in.
+         Watch for object-reference access where the owner is not verified.
+      5. **Secrets & config.** No credentials in code, logs, or errors.
+         Secrets come from a Secret/env, never a literal. Least-privilege on
+         any new permission or RBAC rule — never a wildcard or admin-equivalent
+         grant.
+      6. **Dependencies & supply chain.** New dependency pinned and from a
+         trusted source? New base image minimal and scanned?
+      7. **Failure modes.** Does the code fail closed (deny on error) rather
+         than open? Are limits and timeouts in place?
+
+      ## Output
+      Produce a short written review:
+      - Findings ordered by risk (likelihood × impact), each with the file
+        and line, the attack scenario, and a concrete remediation.
+      - A list of which scanner skill should verify each class of finding
+        (e.g. "run sast-scan on the handler", "run iac-scan on the new Role").
+      - An explicit "no issues found in X" for the areas you cleared, so the
+        reviewer sees the coverage, not just the hits.
+
+      ## Boundaries
+      - Analysis only — you read the diff and reason; you do not modify code.
+        Propose fixes in the review for the author to apply. Never recommend
+        weakening a control, a gate, or a scanner rule to clear a finding.
+  permissions:
+  - fs:read
