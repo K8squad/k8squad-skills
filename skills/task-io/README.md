@@ -84,6 +84,16 @@ Request:
 { "body": "Shipped the migration; waiting on review." }
 ```
 
+The optional `kind` field (ADR-0029 Option B) classifies the comment. Omit it
+(or send `""`) for an ordinary thread comment — unchanged behaviour. Send
+`"initial_findings"` for the **one** early initial-findings note (see below).
+Any other value is rejected `400 Bad Request` (`kind must be empty or
+initial_findings`) — it is a closed enum.
+
+```json
+{ "body": "Understood: fix the flaky retry. Plan: add jitter + cap.", "kind": "initial_findings" }
+```
+
 `201 Created` →
 
 ```json
@@ -91,6 +101,21 @@ Request:
 ```
 
 An empty `body` is rejected `400 Bad Request` (`comment body required`).
+
+#### Post your initial findings early (every run)
+
+Early in **every** run — right after you have read your work item and understood
+it, and **before** deep implementation or decomposition — post **exactly one**
+`post-comment` with `"kind": "initial_findings"`. A short note on what you
+understood and how you intend to proceed is enough. Post it **once**, not per
+step.
+
+This is not optional decoration: for work items sourced from a GitHub issue, the
+platform mirrors this single note back to the source issue as the run's *initial
+findings* comment (the terminal result is mirrored separately at the end). A
+plain comment (no `kind`) is **not** mirrored — only `"kind":
+"initial_findings"` emits the signal the write-back consumes. Write it for an
+external reader and include **no secrets**.
 
 ### `POST /update-status`
 
