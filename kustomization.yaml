@@ -51,3 +51,18 @@ resources:
 # MCPServers and credential Secrets, and a dangling ref rejects the Skill at
 # admission. Wire them in (WS-8) once the go-live gate clears (ISI-5754 §7;
 # unblock owner = BOARD/Henrik).
+# Ops / IaC category (ISI-5769). All six are write/mutation skills attached ONLY
+# to ops roles (ProxOps/DevOps); destructive verbs require confirmation in the
+# body (§7 decision #2). They carry no mcpToolRefs, so they admit cleanly and
+# ship here. Their WRITE power only materializes once the operator provisions
+# the role's write RBAC / EgressPolicy, and the credential-needing ones
+# (terraform/ansible/proxmox-api) only mutate once the board provisions creds
+# (credential-vault go-live gate, WS-9 / ISI-5777). clusterapi/terraform/
+# ansible/proxmox-api require the long-tail toolchains from ISI-5768 — apply
+# them per-namespace with `kubectl apply -k toolchains/`.
+- skills/kubectl-ops/skill.yaml
+- skills/clusterapi/skill.yaml
+- skills/terraform/skill.yaml
+- skills/ansible/skill.yaml
+- skills/proxmox-api/skill.yaml
+- skills/helm-ops/skill.yaml

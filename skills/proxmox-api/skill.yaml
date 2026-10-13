@@ -1,0 +1,64 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: proxmox-api
+spec:
+  source:
+    type: inline
+    inline: |
+      # proxmox-api — Proxmox VE node / VM / container ops
+
+      Drive a Proxmox VE host through its CLIs:
+
+        pvesh get ...                 — read the PVE REST API (nodes, storage, tasks)
+        qm list / config / status     — inspect VMs, safe
+        qm start / stop / shutdown / migrate / snapshot
+        qm move-disk / set / clone / destroy   — DESTRUCTIVE at the storage layer
+        pct ...                       — the same, for LXC containers
+
+      Attached ONLY to operations roles (ProxOps). Read verbs are safe; VM and
+      container lifecycle verbs mutate real infrastructure.
+
+      ## Credentials
+
+      The Proxmox API token is projected into the Run by the platform as an
+      environment variable — this skill NEVER embeds the token and never writes
+      it to a file. Do not read, echo, or transmit the token value. If the
+      token is not provisioned, the mutating actions are inert.
+
+      ## Inspect before you mutate
+
+      1. `pvesh get /nodes/<node>/storage/<store>/status` and `qm config <vmid>`
+         to confirm the current state, free space, and disk references.
+      2. For any disk move / resize, confirm free space on the target storage
+         first (leave snapshot headroom).
+
+      ## Destructive operations require confirmation
+
+      `qm destroy` / `pct destroy`, `qm move-disk ... --delete`, snapshot
+      deletion, and `set --delete <disk>` remove data and cannot be undone.
+      `stop` / `shutdown` / `migrate` interrupt a running workload. Confirm the
+      exact VM/CT id and the action with the user before running any of these,
+      unless already explicitly authorized this session. Take a `qm snapshot`
+      as a rollback layer before a disk move, and keep it through the soak
+      window.
+
+      ## Shared NFS caveat
+
+      An intermittent `directory does not exist or is unreachable` on a shared
+      NFS store is an expected transient — re-check the store status across all
+      nodes and retry the same command once it is active everywhere, rather
+      than escalating on the first failure.
+
+      ## After
+
+      Confirm the VM/CT reached the expected state (`qm status` / `pct status`)
+      and report back to the user.
+  permissions:
+  - exec:pvesh
+  - exec:qm
+  - exec:pct
+  - net:egress:proxmox
+  requires:
+    toolchains:
+    - proxmox-cli@8

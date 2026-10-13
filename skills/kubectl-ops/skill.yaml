@@ -1,0 +1,61 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: kubectl-ops
+spec:
+  source:
+    type: inline
+    inline: |
+      # kubectl-ops — cluster write / mutation (ops roles only)
+
+      The write superset of the read-only `kubectl-debug` skill. Use this to
+      change live cluster state with `kubectl`:
+
+        kubectl apply / create / patch / label / annotate / set
+        kubectl scale / rollout restart / rollout undo
+        kubectl delete   — DESTRUCTIVE
+
+      Read verbs (get / describe / logs / events / top) are included so you do
+      not need a second skill to inspect before and after a change.
+
+      ## Trust boundary
+
+      This skill is attached ONLY to operations roles (ProxOps, DevOps). It
+      operates strictly inside the namespace and RBAC the operator granted —
+      it does not and cannot widen that envelope. If a verb is refused at
+      runtime, the grant is intentionally narrow; escalate, do not work around
+      it.
+
+      ## Before you mutate
+
+      1. `kubectl diff -f <manifest>` (or describe the current object) so you
+         know exactly what changes.
+      2. Stay in the granted namespace. Never target `kube-system` or
+         cluster-scoped objects unless the task explicitly calls for it and the
+         grant allows it.
+      3. Prefer declarative `apply` over imperative edits so the change is
+         reproducible and reviewable.
+
+      ## Destructive verbs require confirmation
+
+      `kubectl delete`, `scale --replicas=0`, and `rollout undo` change or
+      remove running state. Confirm the exact target (name, namespace, kind)
+      with the user before running any of them, unless you were already
+      explicitly authorized for that specific action this session. Never pass
+      `--all` / `--all-namespaces` to a delete.
+
+      ## After
+
+      Verify the result (`kubectl get` / `rollout status`) and report what
+      changed back to the user.
+  permissions:
+  - k8s:get
+  - k8s:list
+  - k8s:watch
+  - k8s:apply
+  - k8s:patch
+  - k8s:scale
+  - k8s:delete
+  requires:
+    toolchains:
+    - kubectl@1.36

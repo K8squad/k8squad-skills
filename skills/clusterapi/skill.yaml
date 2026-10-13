@@ -1,0 +1,60 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: clusterapi
+spec:
+  source:
+    type: inline
+    inline: |
+      # clusterapi — Cluster API (CAPI / CAPMOX) lifecycle
+
+      Drive the Cluster API management cluster with `clusterctl`, plus the
+      `kubectl` verbs needed to apply and inspect CAPI custom resources
+      (Cluster, Machine, ProxmoxMachineTemplate, KubeadmControlPlane, …).
+
+        clusterctl init / generate cluster / describe cluster
+        clusterctl move   — state migration (DESTRUCTIVE to the source)
+        clusterctl upgrade plan / upgrade apply
+        kubectl apply / get / describe on CAPI CRs
+
+      Attached ONLY to operations roles (ProxOps, DevOps). Targets the
+      MANAGEMENT cluster, never a workload cluster's own API.
+
+      ## clusterctl init is additive and idempotent
+
+      The first call initializes the management cluster; subsequent calls add
+      more providers and will not touch already-installed ones. Provider
+      versions are PINNED — read the pin files, never float a provider version,
+      and open a separate change to bump or add a provider.
+
+      ## Render, then apply
+
+      - `clusterctl generate cluster` renders manifests from templates and
+        values — review the rendered YAML before applying it.
+      - Apply CAPI CRs declaratively with `kubectl apply` so the change is
+        reproducible.
+
+      ## Destructive operations require confirmation
+
+      `clusterctl move`, `clusterctl upgrade apply`, and deleting a Cluster /
+      control-plane / Machine CR all change or tear down real infrastructure.
+      Confirm the exact target and direction with the user first, unless
+      already explicitly authorized this session. Take a `clusterctl move`
+      backup before migrating state and keep it until the target is verified
+      healthy.
+
+      ## After
+
+      `clusterctl describe cluster` and check control-plane / worker Machine
+      readiness; report status back to the user.
+  permissions:
+  - exec:clusterctl
+  - k8s:get
+  - k8s:list
+  - k8s:apply
+  - k8s:patch
+  - k8s:delete
+  requires:
+    toolchains:
+    - clusterctl@1.9
+    - kubectl@1.36
