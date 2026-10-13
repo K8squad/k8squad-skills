@@ -64,6 +64,64 @@ The long-tail toolchains these pin (`clusterctl@1.9`, `terraform@1.9`,
 `ansible-core@2.17`, `proxmox-cli@8`, from ISI-5768) are BYO — install them
 per-namespace with `kubectl apply -k toolchains/`.
 
+### Observability / SRE set (ISI-5772)
+
+| Skill | Focus | Purpose |
+|-------|-------|---------|
+| [`bluebox`](skills/bluebox) | sre | Drive the Bluebox CLI — investigate production incidents, instrument services with OpenTelemetry, verify fixes against Dynatrace data. Pins the `bluebox-cli@1` toolchain (BYO). |
+
+### Security set (ISI-5773)
+
+Scanner / analysis skills — read-only against the source tree, least-privilege
+`exec:` grants, no MCP refs. They admit cleanly and ship now. Pair them for a
+full pre-release security sweep.
+
+| Skill | Focus | Purpose |
+|-------|-------|---------|
+| [`sast-scan`](skills/sast-scan) | security | Static application security testing with semgrep — injection / authz / crypto / taint defects (`semgrep@1`). |
+| [`secret-scan`](skills/secret-scan) | security | Committed-credential detection with gitleaks across the tree + git history (`gitleaks@8`). |
+| [`vuln-scan`](skills/vuln-scan) | security | Container-image & filesystem CVE scanning with trivy + grype (`trivy@0.58`, `grype@0.87`). |
+| [`iac-scan`](skills/iac-scan) | security | IaC / Kubernetes misconfiguration scanning with checkov + kube-bench (`checkov@3`). |
+| [`security-review`](skills/security-review) | security | Guided threat-model / security review — text-only reasoning, no toolchain. |
+
+### Content set (ISI-5771)
+
+| Skill | Focus | Purpose |
+|-------|-------|---------|
+| [`blog-engine`](skills/blog-engine) | content | Plan / write / rewrite / audit long-form blog + newsletter content (text-only; SEO E-E-A-T + GEO/AEO). |
+| [`doc-convert`](skills/doc-convert) | content | Convert Markdown / HTML into `.docx` / PDF / HTML / `.pptx` via pandoc (`pandoc@3`). |
+| [`youtube-storyboard`](skills/youtube-storyboard) | content | Topic → spoken script + scene storyboard + shot list (text-only planning). |
+| [`tech-docs`](skills/tech-docs) | content | Author ADRs, runbooks, design docs, READMEs in the BMAD house style (text-only). |
+| [`blog-publish`](skills/blog-publish) _(gated)_ | content | Publish / update an article via the `blog-platform` MCP server — authored but **not yet wired** (see gated note below). |
+
+### Design set (ISI-5770)
+
+| Skill | Focus | Purpose |
+|-------|-------|---------|
+| [`dataviz`](skills/dataviz) | design | Accessible, self-contained SVG charts (bar / donut / line / radar …) that read in light + dark (`node@22`). |
+| [`slides-deck`](skills/slides-deck) | design | Outline / post → Marp deck → PPTX + PDF (`marp@4`, `pandoc@3`). |
+| [`image-gen`](skills/image-gen) _(gated)_ | design | Hero / inline / OG imagery via a Gemini / fal.ai MCP server — **not yet wired** (gated note below). |
+| [`video-gen`](skills/video-gen) _(gated)_ | design | Short clips from a prompt / reference image via a HeyGen / fal.ai MCP server — **not yet wired**. |
+| [`audio-music`](skills/audio-music) _(gated)_ | design | Voiceover / SFX / music via an ElevenLabs MCP server — **not yet wired**. |
+
+### Social set (ISI-5774)
+
+| Skill | Focus | Purpose |
+|-------|-------|---------|
+| [`social-repurpose`](skills/social-repurpose) | social | One long-form source → X thread / LinkedIn post / YouTube script / Reddit post / email (text-only, no credential). |
+| [`linkedin-publish`](skills/linkedin-publish) _(gated)_ | social | Publish / schedule LinkedIn posts + read engagement via the `linkedin` MCP server — **not yet wired**. |
+| [`x-publish`](skills/x-publish) _(gated)_ | social | Publish tweets / threads + read engagement via the `x` MCP server — **not yet wired**. |
+| [`social-stats`](skills/social-stats) _(gated)_ | social | Read engagement metrics across LinkedIn + X (read-only) via the `linkedin` + `x` MCP servers — **not yet wired**. |
+
+> **Gated skills (`_(gated)_`)** are authored and schema-valid but intentionally
+> **absent from the root `kustomization.yaml`**: each carries an `mcpToolRefs`
+> entry (`blog-platform`, `gemini-image` / `fal` / `heygen` / `elevenlabs`,
+> `linkedin` / `x`) that is **dangling** until the board provisions the matching
+> `MCPServer` + credential `Secret`, and a dangling ref rejects the Skill at
+> admission. WS-8 (ISI-5775) wires them into the catalog once the credential-vault
+> go-live gate clears (WS-9 / ISI-5777; unblock owner = BOARD/Henrik). Everything
+> else in the tables above ships today.
+
 ## The capability plane (how a Skill actually resolves)
 
 With the Skills & tools implementation landed (ISI-3280 Epics A–C, ADRs
@@ -208,14 +266,18 @@ posture is emit.
 
 ## Install long-tail Toolchains
 
-The skills in this catalog that use long-tail tools (`code-search`, `delve-pprof`,
-`golangci-lint`, `http-grpc-probe`, `psql-inspect`) require cluster-local `Toolchain`
-objects. This repo ships them under `toolchains/`. Two tiers:
+Many skills in this catalog use long-tail tools — `code-search`, `delve-pprof`,
+`golangci-lint`, `http-grpc-probe`, `psql-inspect` (dev/debug), the Ops/IaC set
+(`clusterapi`, `terraform`, `ansible`, `proxmox-api`), the Security set
+(`sast-scan`, `secret-scan`, `vuln-scan`, `iac-scan`), `bluebox`, and the
+Content/Design set (`doc-convert`, `slides-deck`, and the gated media skills) —
+all of which require cluster-local `Toolchain` objects. This repo ships them
+under `toolchains/`. Two tiers:
 
 | Tier | Tools | How to install |
 |------|-------|----------------|
 | **Cluster default catalog** (admin, once) | `kubectl`, `git`, `gh`, `go`, `node`, `dtctl`, `docker-cli`, `curl`, `helm`, … | `helm install k8squad ... --set tools.defaultCatalog.enabled=true` |
-| **Long-tail BYO** (team namespace) | `ripgrep`, `ast-grep`, `delve`, `golangci-lint`, `grpcurl`, `postgres-client` | `kubectl apply -k toolchains/ -n <team-namespace>` |
+| **Long-tail BYO** (team namespace) | `ripgrep`, `ast-grep`, `delve`, `golangci-lint`, `grpcurl`, `postgres-client`, `clusterctl`, `terraform`, `ansible-core`, `proxmox-cli`, `bluebox-cli`, `semgrep`, `gitleaks`, `trivy`, `grype`, `checkov`, `ffmpeg`, `marp`, `pandoc` | `kubectl apply -k toolchains/ -n <team-namespace>` |
 
 Apply the long-tail set into your team namespace:
 
@@ -279,19 +341,24 @@ spec:
 
 ## Role → Skill attachment matrix
 
-Recommended defaults (from ISI-3271; least-privilege — the PM/CEO/UX/etc. roles
-lean on the `bmad` / `github` / `graphical` defaults only):
+Recommended defaults (from ISI-3271, extended by the ISI-5754 skill-category
+expansion; least-privilege — the PM/CEO/UX/etc. roles lean on the `bmad` /
+`github` / `graphical` defaults only). Skills marked _(gated)_ in the catalog
+tables stay off a role until the board provisions their MCP server + credential.
 
 | Role | Recommended skills |
 |------|--------------------|
-| **Coder** | code-search, go-build-test, git-workflow, golangci-lint, delve-pprof, psql-inspect, kubectl-debug, github |
-| **Code Reviewer** | code-search, golangci-lint, go-build-test, git-workflow, github |
+| **Coder** | code-search, go-build-test, git-workflow, golangci-lint, delve-pprof, psql-inspect, kubectl-debug, github, sast-scan, secret-scan |
+| **Code Reviewer** | code-search, golangci-lint, go-build-test, git-workflow, github, sast-scan, secret-scan, security-review |
 | **Test Architect** | go-build-test, code-search, git-workflow, kubectl-debug, psql-inspect, otel-observability-query |
-| **DevOps** | kubectl-debug, container-build, git-workflow, psql-inspect, otel-observability-query, github, kubectl-ops, clusterapi, terraform, ansible, helm-ops |
-| **ProxOps** | kubectl-debug, kubectl-ops, clusterapi, proxmox-api, terraform, ansible, helm-ops, git-workflow, github |
-| **Observability** | otel-observability-query, kubectl-debug, delve-pprof, dynatrace, dt-dql-essentials |
-| **Architect** | code-search, graphical |
-| **Graphical Designer** | graphical |
+| **DevOps** | kubectl-debug, container-build, git-workflow, psql-inspect, otel-observability-query, github, kubectl-ops, clusterapi, terraform, ansible, helm-ops, iac-scan |
+| **ProxOps** | kubectl-debug, kubectl-ops, clusterapi, proxmox-api, terraform, ansible, helm-ops, git-workflow, github, iac-scan |
+| **Observability / SRE** | otel-observability-query, kubectl-debug, delve-pprof, dynatrace, dt-dql-essentials, bluebox |
+| **Security Analyst** | sast-scan, secret-scan, vuln-scan, iac-scan, security-review, code-search, github |
+| **Content Writer** | blog-engine, tech-docs, doc-convert, youtube-storyboard, social-repurpose, dataviz |
+| **Graphical Designer** | graphical, dataviz, slides-deck |
+| **Social / Marketing** | social-repurpose, slides-deck |
+| **Architect** | code-search, graphical, tech-docs, dataviz |
 | **Challenger** | code-search |
 | **All roles** | bmad |
 
