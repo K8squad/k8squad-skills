@@ -1,0 +1,53 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: secret-scan
+spec:
+  source:
+    type: inline
+    inline: |
+      # secret-scan
+
+      Detect committed credentials with gitleaks — API keys, tokens,
+      private keys, and high-entropy strings in the working tree and in git
+      history. This is the same gate CI runs; use it locally so a leak is
+      caught before the push, not after.
+
+      ## When to use
+      - Before opening a PR that adds config, fixtures, scripts, or CI files.
+      - When a scanner, reviewer, or incident flags a possible leak and you
+        need to confirm scope and history.
+
+      ## How to run
+      Scan the uncommitted working tree:
+
+          gitleaks detect --no-git --redact --report-format json --report-path gitleaks.json
+
+      Scan full git history (what CI enforces on the branch):
+
+          gitleaks git --redact --report-format json --report-path gitleaks.json .
+
+      Always pass `--redact` so the finding report shows the location and
+      rule, not the raw secret value. Honor the repo's `.gitleaks.toml`
+      when present; do not loosen its rules to clear a hit.
+
+      ## Triage
+      - Treat every hit as live until proven otherwise. A real secret must be
+        rotated at the source of record first — removing it from git does not
+        un-leak it.
+      - For a confirmed false positive (a test fixture, a documented sample),
+        add a narrow allowlist entry in `.gitleaks.toml` with a comment, or
+        split the literal in the fixture so it is no longer a contiguous
+        credential; prefer the fixture fix.
+      - Report what was found, where, and whether it reached a remote, so the
+        operator can decide on rotation and history rewrite.
+
+      ## Boundaries
+      - Read-only; never print an unredacted secret into a comment, log, or
+        PR. Pairs with sast-scan, vuln-scan, iac-scan, and security-review.
+  permissions:
+  - fs:read
+  - exec:gitleaks
+  requires:
+    toolchains:
+    - gitleaks@8

@@ -1,0 +1,53 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: sast-scan
+spec:
+  source:
+    type: inline
+    inline: |
+      # sast-scan
+
+      Static application security testing with semgrep. Find injection,
+      authz, crypto-misuse, and taint-flow defects in source before they
+      ship — the SAST pass Coder/Reviewer run so the finding lands in the
+      diff, not in production.
+
+      ## When to use
+      - Reviewing a PR that touches request handling, auth, file/path,
+        templating, deserialization, or shelling out to a subprocess.
+      - Auditing a service before a release.
+
+      ## How to run
+      Scan the working tree with a curated ruleset and emit machine-readable
+      results:
+
+          semgrep scan --config auto --error --json --output semgrep.json .
+
+      For a focused language pass use a registry pack, e.g.
+      `--config p/golang`, `--config p/javascript`, `--config p/python`, or
+      point `--config` at a repo-local rules directory when the team keeps
+      its own rules under version control. Use `--baseline-commit <sha>` to
+      report only findings introduced since a base commit on large repos.
+
+      ## Triage
+      - Rank by severity (ERROR > WARNING > INFO) and by exploitability in
+        this codebase, not by raw count.
+      - Fix the root cause in the code. Do not weaken or delete a rule to
+        clear a finding; if a result is a true false-positive, add a
+        narrowly-scoped `nosemgrep` with a one-line reason on that line and
+        call it out in review.
+      - Report every ERROR-level finding you leave open, with the reason, so
+        the reviewer and operator can see it.
+
+      ## Boundaries
+      - Read-only against the source tree; never edit app code as part of the
+        scan itself — propose fixes in review.
+      - Pairs with secret-scan, vuln-scan, iac-scan, and security-review for a
+        full pre-release security sweep.
+  permissions:
+  - fs:read
+  - exec:semgrep
+  requires:
+    toolchains:
+    - semgrep@1

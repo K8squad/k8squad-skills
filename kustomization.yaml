@@ -22,6 +22,15 @@ resources:
 - skills/http-grpc-probe/skill.yaml
 # Social category (ISI-5774). social-repurpose is text-only and ships now.
 - skills/social-repurpose/skill.yaml
+# Security category (ISI-5754 §3.6, ISI-5773). All five are scanner/analysis
+# skills with no MCP refs and least-privilege exec perms — they ship now.
+# Scanner toolchains (semgrep/gitleaks/trivy/grype/checkov) ship in toolchains/
+# (ISI-5768). security-review is text-only (no toolchain).
+- skills/sast-scan/skill.yaml
+- skills/secret-scan/skill.yaml
+- skills/vuln-scan/skill.yaml
+- skills/iac-scan/skill.yaml
+- skills/security-review/skill.yaml
 # linkedin-publish / x-publish / social-stats are authored but intentionally
 # NOT listed here: their mcpToolRefs ([linkedin]/[x]) are dangling until the
 # board provisions the LinkedIn + X API MCPServers and credential Secrets, and a
