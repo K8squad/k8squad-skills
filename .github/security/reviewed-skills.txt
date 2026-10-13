@@ -1,0 +1,24 @@
+# Reviewed-skills baseline — persistent MEDIUM security sign-off (ISI-5790).
+#
+# A MEDIUM finding from .github/scripts/skill_security_scan.py (privileged
+# sidecar, exec:docker-class permission, unpinned git ref, egress to a new host)
+# means "a human must review this once". This file is the DURABLE record of that
+# review, so an already-reviewed skill is not re-blocked on every unrelated PR.
+#
+# Format (one sign-off per line):
+#   <skill-dir> <sha256-content-hash>   # who / when / why
+#
+# The hash covers EVERY file under skills/<name>/, so editing a reviewed skill
+# changes its hash and the sign-off is re-demanded. A NEW or CHANGED skill with a
+# MEDIUM finding is NOT matched (hash miss) and still blocks until signed off.
+# HIGH findings are NEVER baselined — they always block.
+#
+# To record a sign-off after reviewing a skill:
+#   1. Review the flagged skill (why it needs the privileged grant).
+#   2. Regenerate the line: python3 .github/scripts/skill_security_scan.py --emit-baseline .
+#   3. Add/replace the skill's line below and commit it in the same PR.
+# Changes to this file are a security control — a maintainer must review the diff
+# (see CONTRIBUTING.md § "Persistent security sign-off").
+
+skills/container-build 13e625b6aa6fcab664a7fee08a69d1765b02fd9489bd1b2223c96f3ea362029a  # dockerd sidecar + exec:docker — buildx multi-arch image build; reviewed ISI-3276, recorded ISI-5790
+skills/go-build-test 74e11cb87000f8ab1e8c240d67cd660ec88f227ee28b1356d9f5f0eeb0c853ee  # dockerd sidecar — testcontainers/integration tests; reviewed ISI-3276, recorded ISI-5790

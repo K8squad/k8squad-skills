@@ -113,10 +113,16 @@ jobs:
           echo "::error::${{ steps.scan.outputs.high }} HIGH-severity security finding(s). See annotations. This PR is blocked until they are removed."
           exit 1
 
-      # MEDIUM findings do not auto-block, but they require a maintainer to review
-      # the flagged skill and apply the `skill-security-reviewed` label. Because
-      # this runs from `pull_request`, the label is read from the PR event payload
-      # (no privileged token needed).
+      # MEDIUM findings require a human to review the flagged skill ONCE. The
+      # scanner's `medium` output EXCLUDES findings already signed off in
+      # .github/security/reviewed-skills.txt at the skill's current content hash
+      # (ISI-5790), so a PR that only carries pre-reviewed MEDIUMs (e.g. the
+      # container-build / go-build-test dind skills) passes with no per-PR action.
+      # Only NEW or CHANGED MEDIUM skills remain in `medium` and need sign-off,
+      # via EITHER the persistent baseline (preferred: a maintainer adds the skill
+      # to reviewed-skills.txt in the PR) OR the fast-path `skill-security-reviewed`
+      # label. Because this runs from `pull_request`, the label is read from the
+      # PR event payload (no privileged token needed).
       - name: Require security sign-off for MEDIUM findings
         if: steps.scan.outputs.medium != '0'
         env:
@@ -125,6 +131,6 @@ jobs:
           if [[ ",${LABELS}," == *",skill-security-reviewed,"* ]]; then
             echo "MEDIUM findings acknowledged via 'skill-security-reviewed' label."
           else
-            echo "::error::${{ steps.scan.outputs.medium }} MEDIUM-severity finding(s) require human security sign-off. A maintainer must review the flagged skill(s) and apply the 'skill-security-reviewed' label to merge."
+            echo "::error::${{ steps.scan.outputs.medium }} un-baselined MEDIUM-severity finding(s) require human security sign-off. A maintainer must review the flagged skill(s) and EITHER record the sign-off persistently in .github/security/reviewed-skills.txt (run: python3 .github/scripts/skill_security_scan.py --emit-baseline .) OR apply the 'skill-security-reviewed' label to merge."
             exit 1
           fi

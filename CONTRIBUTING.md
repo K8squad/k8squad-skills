@@ -92,8 +92,8 @@ secrets** — they never execute your skill body.
 
    | Severity | Effect |
    |----------|--------|
-   | **HIGH** | **Blocks the PR.** Must be removed. |
-   | **MEDIUM** | Requires a maintainer to review and apply the `skill-security-reviewed` label before merge. |
+   | **HIGH** | **Blocks the PR.** Must be removed. Never baselined. |
+   | **MEDIUM** | Requires human security sign-off **once per skill revision** — see [Persistent security sign-off](#persistent-security-sign-off). Already-reviewed skills do not re-block unrelated PRs. |
 
 ## The review bar
 
@@ -123,6 +123,44 @@ Your skill will require **human sign-off (MEDIUM)** if it:
   with a justification, and a maintainer will confirm it.
 - Contains **stealth instructions** — telling the agent to act "silently", hide
   activity, or proceed "without telling the user".
+
+## Persistent security sign-off
+
+A MEDIUM finding means "a human must review this skill **once**". That sign-off
+is recorded durably in **`.github/security/reviewed-skills.txt`**, keyed by
+`<skill-dir> <sha256-content-hash>`. The hash covers **every file** under
+`skills/<name>/`, so:
+
+- An **already-reviewed** skill (its dir + current hash is in the baseline) has
+  its MEDIUM findings acknowledged automatically — it does **not** re-block
+  unrelated PRs. This is why adding a clean new skill no longer turns red just
+  because `container-build` / `go-build-test` carry a reviewed `dockerd` sidecar.
+- A **new or changed** skill with a MEDIUM finding is not in the baseline (hash
+  miss) and **still blocks** until a maintainer signs it off.
+- **HIGH findings are never baselined** — they always block.
+
+### If your PR adds or changes a skill that trips a MEDIUM
+
+A maintainer reviews the flagged skill and records the sign-off **one** of two
+ways (the first is preferred because it is durable and auditable in the diff):
+
+1. **Persistent baseline (preferred).** Regenerate the line(s) and commit them to
+   `.github/security/reviewed-skills.txt` in the same PR:
+
+   ```bash
+   python3 .github/scripts/skill_security_scan.py --emit-baseline .
+   # copy the printed `skills/<name> <hash>` line(s) into reviewed-skills.txt,
+   # with a trailing `# who / when / why` comment
+   ```
+
+2. **Fast path.** A maintainer applies the `skill-security-reviewed` label, which
+   re-runs the gate green for that PR only (no persistent record).
+
+Editing a reviewed skill later changes its hash, so its sign-off is re-demanded —
+exactly the point: every change gets a fresh look. Changes to
+`reviewed-skills.txt` (and to the scanner/workflow) are a **security control**;
+a maintainer must review the diff, and gate changes additionally require the
+repository owner's explicit approval.
 
 ## Before you open a PR
 
