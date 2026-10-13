@@ -1,0 +1,89 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: video-gen
+spec:
+  source:
+    type: inline
+    inline: |
+      # video-gen — Generate, Edit & Assemble Video
+
+      Produce short video clips from a text prompt or a reference image, edit
+      and trim them, and assemble a finished piece — through a granted
+      video-generation MCP server (HeyGen for prompt-to-video / avatars,
+      fal.ai for model gateways such as VEO / Kling / Seedance / MiniMax) plus
+      the local `ffmpeg` toolchain for deterministic editing. This skill
+      **never embeds a credential**: provider tokens live on the MCP server's
+      `credentialSecretRef` and are projected per-Run (e.g.
+      `KSQUAD_MCP_HEYGEN_TOKEN` / `KSQUAD_MCP_FAL_TOKEN`). If no video provider
+      is provisioned, the generation actions are inert — the ffmpeg editing
+      path still works on existing clips.
+
+      ## Step 1 — Scope the clip
+
+      Generative video is short and expensive — plan before you spend:
+
+      - **Mode** — text-to-video (describe the scene) or image-to-video
+        (animate a still already in the Run).
+      - **Duration & aspect** — 16:9 (landscape), 9:16 (shorts/reels), 1:1.
+        Keep single generations to a few seconds; stitch for longer pieces.
+      - **Provider fit** — HeyGen for talking-avatar / explainer; fal.ai
+        gateway models for cinematic b-roll and motion.
+
+      ## Step 2 — Prompt the model
+
+      - Describe subject, motion, camera move (push-in, pan, static), setting,
+        lighting, and style — motion and camera language matter more than for
+        stills.
+      - For image-to-video, reference the source still and describe only the
+        motion to add.
+      - Call the granted video MCP tool; poll for the job result and download
+        the rendered clip into the Run.
+
+      ## Step 3 — Edit with ffmpeg
+
+      The `ffmpeg` toolchain (provides `ffmpeg`, `ffprobe`; no RBAC) handles all
+      deterministic processing:
+
+          ffprobe -v error -show_streams in.mp4        # inspect first
+          ffmpeg -i in.mp4 -ss 0 -t 6 -c copy clip.mp4  # trim
+          ffmpeg -i a.mp4 -i b.mp4 -filter_complex concat ... out.mp4  # stitch
+          ffmpeg -i in.mp4 -vf scale=1080:1920 reel.mp4 # reframe for shorts
+
+      Use it to trim, concatenate, reframe aspect ratios, add an audio track
+      (pair with `audio-music`), overlay a lower-third, or compress for upload.
+
+      ## Step 4 — Assemble (optional, code-driven)
+
+      For programmatic, data-driven video (animated titles, charts, templated
+      intros), a Remotion-style React composition rendered via the `node@22`
+      toolchain is the path — author the composition, then render frames and mux
+      with ffmpeg. Reserve this for repeatable/templated pieces.
+
+      ## Step 5 — Save & report
+
+      - Write to `video/{slug}.mp4` (create `video/` if missing). Keep source
+        clips under `video/raw/` so edits stay reproducible.
+      - Print a summary: mode, provider/model, duration, edits applied, final
+        resolution, and output path.
+
+      ## Boundaries
+
+      - One deliverable per explicit request; generation is costly — never
+        auto-retry a failed render in a loop.
+      - Never read, log, or transmit any projected provider token.
+      - Provider access is through the granted MCP tools inside the operator-set
+        permission envelope — no raw provider HTTP calls. ffmpeg runs locally on
+        files already in the Run.
+      - Respect brand/IP and likeness: no real public figures, no copyrighted
+        footage or characters.
+  mcpToolRefs:
+  - name: heygen
+  - name: fal
+  permissions:
+  - video:generate
+  - asset:write
+  requires:
+    toolchains:
+    - ffmpeg@7
+    - node@22

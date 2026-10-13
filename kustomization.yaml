@@ -40,3 +40,14 @@ resources:
 # board provisions the LinkedIn + X API MCPServers and credential Secrets, and a
 # dangling ref rejects the Skill at admission. Wire them in (WS-8) once the
 # go-live gate clears (ISI-5774 §7 decision #3; unblock owner = BOARD/Henrik).
+# Design category (ISI-5770). dataviz + slides-deck carry no credential and
+# ship now. slides-deck requires the marp@4 + pandoc@3 long-tail toolchains
+# (ISI-5768) — apply them per-namespace with `kubectl apply -k toolchains/`.
+- skills/dataviz/skill.yaml
+- skills/slides-deck/skill.yaml
+# image-gen / video-gen / audio-music are authored but intentionally NOT listed
+# here: their mcpToolRefs ([gemini-image]/[fal]/[heygen]/[elevenlabs]) are
+# dangling until the board provisions the Gemini / fal.ai / HeyGen / ElevenLabs
+# MCPServers and credential Secrets, and a dangling ref rejects the Skill at
+# admission. Wire them in (WS-8) once the go-live gate clears (ISI-5754 §7;
+# unblock owner = BOARD/Henrik).

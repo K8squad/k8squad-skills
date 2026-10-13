@@ -1,0 +1,84 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: audio-music
+spec:
+  source:
+    type: inline
+    inline: |
+      # audio-music — Voiceover, Sound Effects & Music
+
+      Generate spoken voiceover (narration/dialogue), sound effects, and music
+      (background tracks, jingles, stems) for video and content production,
+      through a granted audio MCP server (ElevenLabs for TTS / SFX / music), and
+      post-process with the local `ffmpeg` toolchain. This skill **never embeds
+      a credential**: the provider token lives on the MCP server's
+      `credentialSecretRef` and is projected per-Run as `KSQUAD_MCP_ELEVENLABS_TOKEN`.
+      If no audio provider is provisioned, the generation actions are inert — the
+      ffmpeg processing path still works on existing audio.
+
+      ## Step 1 — Pick the deliverable
+
+      - **Voiceover** — narration or two-speaker dialogue. Needs the script, a
+        voice choice, and target tone/pace.
+      - **Sound effect** — a short, described one-shot (e.g. "a soft UI click",
+        "distant thunder").
+      - **Music** — instrumental bed, jingle, or a track with a brief. Needs
+        mood, genre, tempo feel, and duration; a composition plan for section
+        control (intro / build / drop / outro).
+
+      ## Step 2 — Prepare the request
+
+      - **VO:** split long scripts into natural paragraph chunks; mark emphasis
+        and pacing; keep pronunciation notes for names/acronyms. Confirm the
+        voice and language before a long render.
+      - **SFX:** describe material, size, distance, and space (dry vs reverberant).
+      - **Music:** give a reference mood and the structure; specify whether it
+        must loop seamlessly and the exact length to match the video.
+
+      ## Step 3 — Generate
+
+      - Call the granted audio MCP tool (TTS, sound-effect, or music endpoint)
+        with the prepared request. For music, prefer a composition plan so
+        sections and length are controllable rather than one opaque prompt.
+      - Keep the raw returned audio; do destructive edits on copies.
+
+      ## Step 4 — Post-process with ffmpeg
+
+      The `ffmpeg` toolchain (provides `ffmpeg`, `ffprobe`; no RBAC) handles
+      deterministic audio work:
+
+          ffmpeg -i vo.mp3 -af loudnorm out.mp3          # normalize loudness
+          ffmpeg -i music.wav -t 30 -af afade=out:st=27:d=3 bed.wav  # trim + fade
+          ffmpeg -i a.wav -i b.wav -filter_complex amix mixed.wav     # mix layers
+          ffmpeg -i in.wav out.mp3                        # transcode for delivery
+
+      Use it to normalize levels (−16 LUFS for VO over music), trim and fade,
+      duck music under narration, layer VO + SFX + bed, and transcode.
+
+      ## Step 5 — Save & report
+
+      - Write to `audio/{slug}.{mp3|wav}` (create `audio/` if missing); keep
+        raw generations under `audio/raw/`. For music with stems, save each stem
+        separately so a video edit can re-balance.
+      - Print a summary: deliverable type, provider/model, voice/mood, duration,
+        processing applied, and output paths.
+
+      ## Boundaries
+
+      - One deliverable per explicit request; generation is costly — never
+        auto-retry a failed render in a loop.
+      - Never read, log, or transmit the projected provider token.
+      - Provider access is through the granted MCP tools inside the operator-set
+        permission envelope — no raw provider HTTP calls. ffmpeg runs locally on
+        files already in the Run.
+      - Respect IP and likeness: no cloning of a real person's voice without
+        explicit authorization; no copyrighted music reproduction.
+  mcpToolRefs:
+  - name: elevenlabs
+  permissions:
+  - audio:generate
+  - asset:write
+  requires:
+    toolchains:
+    - ffmpeg@7

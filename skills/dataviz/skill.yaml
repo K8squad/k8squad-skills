@@ -1,0 +1,82 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: dataviz
+spec:
+  source:
+    type: inline
+    inline: |
+      # dataviz — Dark-Mode-First SVG Data Visualization
+
+      Produce accessible, self-contained SVG charts that read as one system in
+      both light and dark surfaces — bar, grouped bar, lollipop, donut, line,
+      area, and radar. This extends the `graphical` rendering skill with a
+      charting playbook: `graphical` draws arbitrary diagrams/SVG, `dataviz`
+      enforces a chart grammar (one accent per view, transparent background,
+      source attribution, `role="img"` + `aria-label`). It writes `.svg` files
+      only — it holds no credential and makes no network call.
+
+      ## Step 1 — Read the data & pick the form
+
+      Match the mark to the question, not the dataset:
+
+      - **Compare categories** → horizontal bar (sort by value; labels left).
+      - **Compare across two keys** → grouped bar (≤3 groups) or small multiples.
+      - **Rank a few items** → lollipop (less ink than bars).
+      - **Part-of-whole, ≤5 slices** → donut (never a pie; label slices
+        directly, no legend).
+      - **Change over time** → line (≤5 series) or area (single cumulative).
+      - **Multi-axis profile, ≤6 axes** → radar.
+
+      Refuse the chart and state why if the data does not support it (one slice,
+      3-D ask, a pie over 5 wedges, truncated axis that distorts).
+
+      ## Step 2 — Color (the one-accent rule)
+
+      - Neutral base: a single slate/zinc ramp for axes, gridlines, and
+        non-focus marks. Gridlines at ~12% foreground opacity.
+      - **One** high-contrast accent carries the data; a second, clearly distinct
+        hue only when a true second series exists. Never a rainbow of one-off
+        colors.
+      - Verify every text/mark pair clears WCAG AA (4.5:1 for text, 3:1 for
+        large marks) on BOTH a near-black and a near-white surface. Use
+        `currentColor` for text/axes so the chart inherits the page foreground.
+      - Encode with position and length first; use color only to group, never as
+        the sole carrier of a category (color-blind safety).
+
+      ## Step 3 — Transparent, responsive, labelled
+
+      - No background rect — the SVG is transparent so it sits on any surface.
+      - `viewBox` + no fixed pixel width/height, so it scales fluidly.
+      - Direct-label values where space allows instead of a separate legend.
+      - Title via `<title>`, and `role="img"` with an `aria-label` that states
+        the headline finding (e.g. "Bar chart: p95 latency fell 38% after the
+        cache change").
+
+      ## Step 4 — Attribute & save
+
+      - Add a small source/as-of caption inside the SVG footer. Never invent
+        numbers; keep each value's attribution.
+      - Write to `charts/{slug}.svg` (create `charts/` if missing). For inline
+        use (MDX/JSX), also emit the markup block the caller can paste.
+      - Print a summary: chart type chosen and why, accent color, contrast
+        check result for light + dark, and the output path.
+
+      ## Rendering
+
+      Hand-authored SVG needs no toolchain. When a chart is generated from a
+      Node script (d3 scales, layout math), the `node@22` toolchain from the
+      cluster default catalog is available — the same one `graphical` uses — so
+      no extra image is required.
+
+      ## Boundaries
+
+      - Output SVG only; raster export (PNG/OG card) is `image-gen`'s job.
+      - No external fonts or remote asset fetches — charts are self-contained.
+      - One accent per chart; transparent background; always accessible.
+  permissions:
+  - render:svg
+  - asset:write
+  requires:
+    toolchains:
+    - node@22
