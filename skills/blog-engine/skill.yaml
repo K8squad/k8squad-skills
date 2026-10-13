@@ -1,0 +1,100 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: blog-engine
+spec:
+  source:
+    type: inline
+    inline: |
+      # blog-engine — Full-Lifecycle Blog Authoring (text-only)
+
+      Plan, write, rewrite, audit, and optimize long-form blog and newsletter
+      content, tuned for both search rankings (E-E-A-T, answer-first structure)
+      and AI-assistant citations (GEO/AEO). This is a **text-only** engine: it
+      reads source material and writes Markdown/MDX/HTML prose, outlines,
+      schema, and briefs. It generates no images, calls no external API, holds
+      no credential, and never publishes — pair it with `doc-convert` to export
+      and `blog-publish` to ship.
+
+      ## Commands
+
+      Route the request to the matching mode; if none is named, ask which the
+      user wants.
+
+      - **write** — draft a new article from a topic or brief: template choice,
+        answer-first lead, Key Takeaways box, H2/H3 hierarchy, sourced stats,
+        FAQ block, internal-link zones.
+      - **rewrite** — optimize an existing post: replace unsourced claims with
+        attributed data, apply answer-first formatting, tighten headings, add
+        citation capsules, refresh freshness signals.
+      - **outline** — SERP-informed skeleton: H2/H3 hierarchy, per-section word
+        targets, gap analysis, chart/image placement markers, FAQ planning.
+      - **brief** — a full content brief: target keyword, outline, recommended
+        statistics, word-count target, internal-linking architecture, TL;DR.
+      - **strategy** — topic-cluster (hub-and-spoke) architecture, audience
+        mapping, differentiation, AI-citation surface plan.
+      - **calendar** — editorial calendar: topic clusters, publish cadence,
+        decay/freshness update plan, seasonal slots.
+      - **analyze** — score a post on the 5-category / 100-point rubric (content
+        quality, SEO, E-E-A-T, technical, AI-citation readiness) with a
+        prioritized fix list and AI-content-detection flags.
+      - **audit** — roll the analyze pass across a whole blog: per-post scores,
+        orphan pages, topic cannibalization, stale content, action queue.
+      - **geo** — AI-citation audit: passage-level citability, Q&A formatting,
+        entity clarity, structured data, 0–100 readiness score + citation
+        capsules.
+      - **seo-check** — on-page pass/fail: title tag, meta description, heading
+        hierarchy, internal/external links, canonical, OG/Twitter cards, URL
+        shape, alt text.
+      - **schema** — JSON-LD: BlogPosting, Person, Organization, BreadcrumbList,
+        FAQPage, ImageObject, validated against current requirements.
+      - **factcheck** — list every statistical claim with its citation and flag
+        uncited claims as UNVERIFIED. (Verification against live URLs is a
+        network action — do it only where an egress-granted fetch tool exists;
+        otherwise report which claims need manual checking.)
+      - **cannibalization** — cluster post keywords and flag pages competing for
+        the same intent, with merge-or-differentiate guidance.
+      - **taxonomy** — suggest tags/categories from content analysis with a
+        minimum-post-count threshold to avoid thin archives.
+      - **persona** — define/apply a writing voice (tone dimensions, readability
+        target, sentence-length mix, contraction frequency) consumed by write
+        and rewrite.
+      - **update** — apply a freshness pass: refresh dates, stats, and examples
+        on an existing post without a full rewrite.
+
+      ## The 6 pillars of dual optimization
+
+      1. **Answer-first** — lead each section with the direct answer, then
+         elaborate. One quotable sentence per key question.
+      2. **Sourced evidence** — every statistic carries an attribution; never
+         invent a number or a source.
+      3. **Scannable structure** — descriptive H2/H3s, short paragraphs, lists,
+         a Key Takeaways box near the top.
+      4. **Entity clarity** — name people, products, and organizations
+         explicitly so retrieval systems resolve them.
+      5. **Citation capsules** — self-contained passages (claim + data + source)
+         an AI assistant can lift verbatim.
+      6. **Freshness** — visible last-updated date and current-year data;
+         schedule a decay/refresh cycle for evergreen pieces.
+
+      ## Output
+
+      Write Markdown, MDX, or HTML per the target platform (WordPress, Next.js
+      MDX, Hugo, Ghost, Astro, Jekyll, 11ty, Gatsby, plain HTML). Save drafts
+      under `blog/` (create it if missing) as `blog/{slug}.{ext}`, and emit
+      companion files (`.schema.json`, brief, outline) alongside. Print a
+      summary of what was written and the next step (export via `doc-convert`,
+      publish via `blog-publish`, repurpose via `social-repurpose`).
+
+      ## Boundaries
+
+      - **Text only.** Generate no images or audio, call no external API, and
+        read no credential — those are separate, capability-gated skills.
+      - Preserve every statistic's source attribution; mark anything unsourced
+        as UNVERIFIED rather than presenting it as fact.
+      - Do not fetch remote URLs unless an egress-granted fetch tool is present;
+        this skill carries no network permission of its own.
+  permissions:
+  - content:write
+  - content:read
+  - asset:write

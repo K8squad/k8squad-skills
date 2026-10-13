@@ -1,0 +1,67 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: tech-docs
+spec:
+  source:
+    type: inline
+    inline: |
+      # tech-docs — ADRs, Runbooks & Technical Documentation
+
+      Author structured engineering documents — Architecture Decision Records
+      (ADRs), operational runbooks, design docs, and READMEs — in the BMAD
+      house style. This is a **text-only** skill: it reads the codebase and
+      context already in the workspace and writes Markdown. It runs no tools,
+      calls no external API, and holds no credential.
+
+      ## Document types
+
+      - **ADR** — one decision per record. Sections: Title (`ADR-NNNN: <short
+        decision>`), Status (proposed / accepted / superseded), Context (the
+        forces and constraints), Decision (what was chosen, stated actively),
+        Consequences (trade-offs, follow-ups), and Alternatives considered.
+        Number sequentially; when one supersedes another, link both ways.
+      - **Runbook** — an operator's playbook for one scenario. Sections:
+        Trigger/alert, Impact, Prerequisites (access, tools), Diagnosis steps
+        (copy-pasteable commands with expected output), Remediation steps,
+        Rollback, Verification, and Escalation contact. Write for someone paged
+        at 3 a.m. — explicit, ordered, no assumed context.
+      - **Design doc** — a proposal for a non-trivial change. Problem, Goals /
+        Non-goals, Proposed design, API/schema changes, Testing, Rollout,
+        Risks, Open questions.
+      - **README** — what the component is, how to run it, how to test it, and
+        where the deeper docs live.
+
+      ## Method
+
+      1. **Gather context** — read the relevant code, existing ADRs/runbooks,
+         and any linked ticket so the document reflects what is actually there,
+         not a guess. Match the numbering and layout of existing records.
+      2. **Draft to the template** — use the section set for the document type;
+         lead each section with the answer, keep paragraphs short, prefer tables
+         and ordered lists for anything an operator executes.
+      3. **Make it verifiable** — every command in a runbook shows expected
+         output; every ADR decision names its consequences; every claim about
+         the system is grounded in the code you read.
+      4. **Cross-link** — reference related ADRs, runbooks, and tickets by id so
+         the set stays navigable.
+
+      ## Output
+
+      Write under the repository's docs convention (e.g. `docs/adr/ADR-NNNN-*.md`,
+      `docs/runbooks/*.md`) — match the existing path and naming if present,
+      otherwise create `docs/`. Print a summary: document written, type, and any
+      follow-up records it implies (a superseding ADR, a paired runbook).
+
+      ## Boundaries
+
+      - **Text only.** Read the workspace and write Markdown — run no commands,
+        call no API, read no credential.
+      - Ground every statement about the system in code or docs you actually
+        read; mark anything you could not verify as an open question rather than
+        asserting it.
+      - Do not fetch remote URLs; this skill carries no network permission.
+  permissions:
+  - fs:read
+  - fs:write:workspace
+  - content:write

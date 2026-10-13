@@ -1,0 +1,76 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: doc-convert
+spec:
+  source:
+    type: inline
+    inline: |
+      # doc-convert — Document Export (docx / pdf / html / pptx)
+
+      Convert a Markdown, HTML, or other source document into a polished
+      deliverable — Word (`.docx`), PDF, standalone HTML, or a PowerPoint
+      (`.pptx`) deck — using the `pandoc` toolchain (which also provides
+      `weasyprint` and `typst` for high-fidelity PDF). This is the export leg of
+      the content pipeline: `blog-engine` writes the prose, `doc-convert` turns
+      it into a shareable file. It runs local converters on files already in the
+      workspace; it fetches nothing from the network and holds no credential.
+
+      ## Inputs
+
+      - **source** — the file to convert (e.g. `blog/{slug}.md`).
+      - **format** — `docx`, `pdf`, `html`, or `pptx`.
+      - **reference/template** (optional) — a `--reference-doc` (docx/pptx) or
+        CSS/template for house styling; use the project's if one is present.
+      - **out** (optional) — output path; default alongside the source with the
+        format's extension.
+
+      ## Step 1 — Inspect the source
+
+      Read the source, confirm the target format, and note anything that needs a
+      filter: embedded images (must be local, resolvable paths), tables, code
+      blocks, math, or a table of contents.
+
+      ## Step 2 — Convert
+
+      Run the right converter from the `pandoc` toolchain:
+
+      - **docx** — `pandoc in.md -o out.docx` (add `--reference-doc=ref.docx`
+        for house styling, `--toc` for a contents page).
+      - **html** — `pandoc in.md -s -o out.html` (standalone; `--css` for
+        styling, `--embed-resources` to inline assets).
+      - **pdf** — prefer `weasyprint` from HTML for CSS-faithful layout
+        (`pandoc in.md -o tmp.html -s && weasyprint tmp.html out.pdf`), or
+        `pandoc --pdf-engine=typst in.md -o out.pdf` for a fast typographic
+        pass. Pick based on whether the source already has CSS styling.
+      - **pptx** — `pandoc in.md -o out.pptx` (slides split on `##`/`---`; add
+        `--reference-doc=deck-template.pptx` for a branded master). For a
+        richer slide deck from Markdown, the `marp` toolchain is the
+        alternative — note it in the handoff if the user wants slide-native
+        theming.
+
+      ## Step 3 — Verify & report
+
+      - Confirm the output file exists and is non-empty; for PDFs, sanity-check
+        the page count against the source length.
+      - Report the output path, format, size, and any content that degraded
+        (unresolved image, dropped math) so the user can fix the source.
+
+      ## Boundaries
+
+      - Convert only files already in the workspace — do not fetch remote URLs
+        or assets; resolve every image/include to a local path first.
+      - Holds no credential and makes no network call.
+      - Always report content a converter could not render (an unresolved image,
+        dropped math) so the user can fix the source — never let it disappear
+        without a line in the summary.
+  permissions:
+  - fs:read
+  - fs:write:workspace
+  - exec:pandoc
+  - exec:weasyprint
+  - exec:typst
+  - asset:write
+  requires:
+    toolchains:
+    - pandoc@3

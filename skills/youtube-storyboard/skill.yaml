@@ -1,0 +1,83 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: youtube-storyboard
+spec:
+  source:
+    type: inline
+    inline: |
+      # youtube-storyboard — Script, Storyboard & Shot List
+
+      Turn a topic, blog post, or show-notes doc into a production-ready video
+      package: a spoken **script**, a scene-by-scene **storyboard**, and a
+      **shot list**. This is a **text-only** planning skill — it writes the plan
+      that a video-generation step (the `video-gen` skill / WS-3) or a human
+      editor then produces. It renders no video, calls no external API, and
+      holds no credential.
+
+      ## Inputs
+
+      - **source** — topic brief, blog post, or show-notes to adapt.
+      - **format** — short (≤60s vertical), standard (5–12 min), or livestream
+        segment; drives pacing and depth.
+      - **tone/persona** (optional) — reuse the content persona if one is set.
+
+      ## Step 1 — Extract the spine
+
+      Pull the hook, 3–5 teaching beats, the strongest stat or demo moment, and
+      the call-to-action from the source. One sentence each.
+
+      ## Step 2 — Script
+
+      Write the spoken script in delivery order with timecodes:
+
+      - **Hook (0–15s)** — the boldest claim or question; earn the next 10
+        seconds.
+      - **Intro (15–60s)** — what the viewer learns (3 bullets), why now, a
+        credibility line, `[SHOW TITLE CARD]`.
+      - **Body (3–5 beats)** — each beat: key point, supporting data, a concrete
+        example or demo, then a transition.
+      - **CTA (final 15–30s)** — subscribe reason, link to the full piece,
+        tease the next topic.
+
+      Mark spoken words plainly and direction in brackets; estimate duration at
+      ~150 spoken words/minute.
+
+      ## Step 3 — Storyboard
+
+      One row per scene, aligned to the script beats:
+
+      | Scene | Timecode | Visual | On-screen text | Audio / VO line | Notes |
+
+      Describe each visual concretely enough to generate or shoot: subject,
+      framing, motion, and mood.
+
+      ## Step 4 — Shot list
+
+      Flatten the storyboard into an ordered, checkable shot list: shot type
+      (wide / medium / close / screencast / B-roll / motion-graphic), source
+      (live capture, stock, AI-generated, screen recording), duration, and any
+      asset the shot depends on. Group reusable assets so production batches
+      them.
+
+      ## Step 5 — Save & hand off
+
+      Write under `storyboard/` (create it if missing):
+
+          storyboard/{slug}-script.md
+          storyboard/{slug}-storyboard.md
+          storyboard/{slug}-shotlist.md
+
+      Then summarize: total runtime estimate, shot count, which shots need AI
+      generation vs. capture, and the handoff to `video-gen` (for AI-generated
+      shots) and `doc-convert` (to export the package).
+
+      ## Boundaries
+
+      - Plan text only — generate no video, audio, or images here; those are
+        separate, capability-gated skills.
+      - Keep every borrowed statistic's source attribution in the VO notes.
+      - Make no network call and read no credential.
+  permissions:
+  - content:write
+  - asset:write
