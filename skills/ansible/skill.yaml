@@ -1,0 +1,54 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: ansible
+spec:
+  source:
+    type: inline
+    inline: |
+      # ansible — configuration management (playbooks)
+
+      Run Ansible playbooks against inventory hosts:
+
+        ansible-inventory / ansible-config          — inspect, safe
+        ansible-playbook --check --diff             — dry-run, no changes
+        ansible-playbook                            — applies changes to hosts
+        ansible <hosts> -m <module>                 — ad-hoc tasks
+
+      Attached ONLY to operations roles (ProxOps, DevOps).
+
+      ## Credentials
+
+      The connection credentials (SSH key material) and any vault password are
+      projected into the Run by the platform — this skill NEVER embeds a
+      credential or key and never writes one to a file. Reference vaulted
+      values through `--vault-id` / the projected vault password only. Do not
+      read, echo, or transmit any projected credential. If credentials are not
+      provisioned, the playbook actions are inert.
+
+      ## Check mode first
+
+      1. `ansible-inventory --list` to confirm the target hosts and groups.
+      2. `ansible-playbook <play> --check --diff` to preview every change
+         WITHOUT touching the hosts. Summarize the changed tasks for the user.
+      3. Limit blast radius with `--limit <host-or-group>` and `--tags` while
+         iterating.
+
+      ## Applying requires confirmation
+
+      A real `ansible-playbook` run (no `--check`) changes host state, and
+      tasks that restart services, repartition, or remove packages/files are
+      destructive. Confirm the target hosts and the previewed diff with the
+      user before the first applying run, unless already explicitly authorized
+      this session.
+
+      ## After
+
+      Report the play recap (ok / changed / unreachable / failed) back to the
+      user. Re-run in `--check` mode to confirm the play is now idempotent.
+  permissions:
+  - exec:ansible
+  - net:egress:hosts
+  requires:
+    toolchains:
+    - ansible-core@2.17

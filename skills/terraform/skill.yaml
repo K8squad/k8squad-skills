@@ -1,0 +1,52 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: terraform
+spec:
+  source:
+    type: inline
+    inline: |
+      # terraform — infrastructure as code (plan / apply)
+
+      Manage infrastructure with Terraform:
+
+        terraform init / validate / fmt / plan   — safe, read-first
+        terraform apply                           — mutates real infrastructure
+        terraform destroy                         — DESTRUCTIVE
+
+      Attached ONLY to operations roles (ProxOps, DevOps).
+
+      ## Credentials
+
+      Provider credentials and remote-state backend access are projected into
+      the Run by the platform as environment variables — this skill NEVER
+      embeds a credential and never writes one to a file. If the credentials
+      are not provisioned, the apply/destroy actions are inert. Do not read,
+      echo, or transmit any projected credential value.
+
+      ## Plan before you apply
+
+      1. `terraform init` against the configured remote backend.
+      2. `terraform validate` and `terraform plan -out plan.tfplan`.
+      3. Read the plan. Summarize the create / change / DESTROY counts for the
+         user.
+
+      ## Apply and destroy require confirmation
+
+      `terraform apply` and `terraform destroy` change real infrastructure.
+      Confirm the reviewed plan with the user before applying, unless already
+      explicitly authorized this session. Apply the saved plan file
+      (`terraform apply plan.tfplan`) so what runs is exactly what was
+      reviewed. Never auto-approve a destroy. Keep state operations
+      (`state rm` / `import`) behind the same confirmation.
+
+      ## After
+
+      Report the applied changes and any drift. Do not leave a local state
+      file behind — the backend is the source of truth.
+  permissions:
+  - exec:terraform
+  - net:egress:cloud
+  requires:
+    toolchains:
+    - terraform@1.9

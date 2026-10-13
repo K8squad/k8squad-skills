@@ -1,0 +1,57 @@
+apiVersion: ksquad.io/v1alpha1
+kind: Skill
+metadata:
+  name: helm-ops
+spec:
+  source:
+    type: inline
+    inline: |
+      # helm-ops — Helm release lifecycle (install / upgrade / rollback)
+
+      Manage Helm releases on a live cluster:
+
+        helm list / status / get values / history   — inspect, safe
+        helm template / diff                          — preview, no changes
+        helm install / upgrade                        — applies chart resources
+        helm rollback                                 — reverts to a prior revision
+        helm uninstall                                — DESTRUCTIVE
+
+      Read `kubectl` verbs are included so you can inspect the resources a
+      release owns. Attached ONLY to operations roles (ProxOps, DevOps),
+      inside the granted namespace.
+
+      ## Preview before you change
+
+      1. `helm history <release>` to see the current revision and values.
+      2. `helm diff upgrade` (or `helm template`) to see exactly what the
+         upgrade changes before applying it.
+
+      ## Preserve values on tag-only rolls
+
+      When the intent is to move an existing release to a new image tag, use
+      `helm upgrade --reuse-values --set <image.tag path>=<tag>` so other
+      operator-set values are preserved. A bare `helm upgrade` without
+      `--reuse-values` re-renders from chart defaults and can drop live config.
+
+      ## Destructive / state-changing operations require confirmation
+
+      `helm uninstall` removes a release and its resources; `helm rollback`
+      reverts live state to an earlier revision. Confirm the exact release,
+      namespace, and target revision with the user before running either,
+      unless already explicitly authorized this session.
+
+      ## After
+
+      Check `helm status <release>` and the rolled workloads
+      (`kubectl rollout status`), and report the resulting revision back to the
+      user.
+  permissions:
+  - exec:helm
+  - k8s:get
+  - k8s:list
+  - k8s:apply
+  - k8s:patch
+  requires:
+    toolchains:
+    - helm@3.21
+    - kubectl@1.36

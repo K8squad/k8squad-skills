@@ -42,6 +42,28 @@ Each skill lives in its own directory under `skills/<name>/` with a `skill.yaml`
 | [`psql-inspect`](skills/psql-inspect) | debug | Read-only psql into the coordination/run-source DB. |
 | [`http-grpc-probe`](skills/http-grpc-probe) | debug _(optional)_ | curl/grpcurl probing of live endpoints. |
 
+### Ops / IaC set (ISI-5769)
+
+Write/mutation skills for operations roles. Attached **only** to ops roles
+(ProxOps/DevOps) and never self-widening (D8); destructive verbs require
+explicit user confirmation in the body (§7 decision #2). Their write power
+materializes only once the operator provisions the role's write RBAC /
+`EgressPolicy`, and the credential-needing ones only mutate once the board
+provisions creds (credential-vault go-live gate, WS-9 / ISI-5777).
+
+| Skill | Focus | Purpose |
+|-------|-------|---------|
+| [`kubectl-ops`](skills/kubectl-ops) | ops | Write superset of `kubectl-debug` — apply/patch/scale/delete (gated). |
+| [`clusterapi`](skills/clusterapi) | ops | `clusterctl` CAPI/CAPMOX lifecycle — init/generate/move/upgrade. |
+| [`terraform`](skills/terraform) | ops | Terraform plan/apply/destroy; creds platform-projected. |
+| [`ansible`](skills/ansible) | ops | Ansible playbooks (`--check` first); SSH/vault platform-projected. |
+| [`proxmox-api`](skills/proxmox-api) | ops | `pvesh`/`qm`/`pct` node + VM/CT ops; token platform-projected. |
+| [`helm-ops`](skills/helm-ops) | ops | Helm install/upgrade/rollback/uninstall (gated). |
+
+The long-tail toolchains these pin (`clusterctl@1.9`, `terraform@1.9`,
+`ansible-core@2.17`, `proxmox-cli@8`, from ISI-5768) are BYO — install them
+per-namespace with `kubectl apply -k toolchains/`.
+
 ## The capability plane (how a Skill actually resolves)
 
 With the Skills & tools implementation landed (ISI-3280 Epics A–C, ADRs
@@ -265,7 +287,8 @@ lean on the `bmad` / `github` / `graphical` defaults only):
 | **Coder** | code-search, go-build-test, git-workflow, golangci-lint, delve-pprof, psql-inspect, kubectl-debug, github |
 | **Code Reviewer** | code-search, golangci-lint, go-build-test, git-workflow, github |
 | **Test Architect** | go-build-test, code-search, git-workflow, kubectl-debug, psql-inspect, otel-observability-query |
-| **DevOps** | kubectl-debug, container-build, git-workflow, psql-inspect, otel-observability-query, github |
+| **DevOps** | kubectl-debug, container-build, git-workflow, psql-inspect, otel-observability-query, github, kubectl-ops, clusterapi, terraform, ansible, helm-ops |
+| **ProxOps** | kubectl-debug, kubectl-ops, clusterapi, proxmox-api, terraform, ansible, helm-ops, git-workflow, github |
 | **Observability** | otel-observability-query, kubectl-debug, delve-pprof, dynatrace, dt-dql-essentials |
 | **Architect** | code-search, graphical |
 | **Graphical Designer** | graphical |
@@ -283,6 +306,11 @@ lean on the `bmad` / `github` / `graphical` defaults only):
   verbs. A git-sourced body cannot widen this envelope (D8).
 - **`dockerd`-sidecar skills** (`go-build-test`, `container-build`) only resolve
   where `AgentRuntime.capabilities` grants the sidecar (arch §5.3.3/§5.3.4).
+- **Ops / IaC write skills** (`kubectl-ops`, `clusterapi`, `terraform`,
+  `ansible`, `proxmox-api`, `helm-ops`) declare mutation verbs but never
+  self-widen the envelope (D8): the write RBAC, egress, and credentials they
+  need are authorized by the operator/board at wiring time, so they are inert
+  until then and are attached only to ops roles (ISI-5754 §7 decision #2).
 - **Toolchain refs split in two tiers**: the curated catalog set
   (`kubectl@1.36`, `git@2.45`, `gh@2.98`, `go@1.26`, `node@22`, `dtctl@1.0`,
   `docker-cli@29`, `curl@8`, `helm@3.21`, …) resolves with
