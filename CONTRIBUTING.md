@@ -47,6 +47,22 @@ spec:
 
 New skills must also be listed in the root `kustomization.yaml`.
 
+### Gated (MCP-backed) skills — author now, wire on go-live
+
+A skill whose `mcpToolRefs` names an `MCPServer` that does **not** yet exist
+in-cluster must be authored but **held out of `kustomization.yaml`** — a
+dangling ref rejects the Skill at admission, which would break
+`kubectl apply -k .` for the whole catalog. The convention (ISI-5754 §7):
+
+1. Commit the `skill.yaml` + `README.md` as normal (it is schema-valid and
+   security-scannable on its own).
+2. Document the exact `MCPServer` name/shape + credential `Secret` it expects
+   in the skill's `README.md`.
+3. Mark it `_(gated)_` in the root `README.md` catalog table and leave it out
+   of `kustomization.yaml`.
+4. Wire it into `kustomization.yaml` only once the board provisions the server
+   + credential (credential-vault go-live gate, WS-9 / ISI-5777).
+
 ### Capability-plane requirements (fail-closed)
 
 Your skill resolves against live cluster objects — keep these true or Runs
