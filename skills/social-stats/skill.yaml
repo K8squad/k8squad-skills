@@ -2,6 +2,14 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: social-stats
+  annotations:
+    # S6 (ISI-5819): credential TYPE(s) this gated skill consumes, from the S1
+    # binding-registry vocabulary (toolcred.BindingTypes). Comma-separated =
+    # ANY-OF: the skill reads whichever platform is provisioned and flags the
+    # other "not configured" (graceful per-platform skip, never a hard failure),
+    # so the go-live gate is satisfied once EITHER credential resolves.
+    # credentialSecretRef stays empty; the vault resolves at admission (§3.1 A).
+    ksquad.io/credential-type: linkedin-publish,x-publish
 spec:
   source:
     type: inline
