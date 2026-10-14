@@ -2,6 +2,14 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: video-gen
+  annotations:
+    # S6 (ISI-5819): credential TYPE(s) this gated skill consumes, from the S1
+    # binding-registry vocabulary (toolcred.BindingTypes). Comma-separated =
+    # ANY-OF: the skill drives EITHER provider (HeyGen for prompt-to-video,
+    # fal.ai for model gateways), so the go-live gate is satisfied once EITHER
+    # is provisioned — not both (the local ffmpeg editing path needs no
+    # credential). credentialSecretRef stays empty; vault resolves at admission.
+    ksquad.io/credential-type: heygen,fal.ai
 spec:
   source:
     type: inline

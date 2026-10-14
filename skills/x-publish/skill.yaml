@@ -2,6 +2,12 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: x-publish
+  annotations:
+    # S6 (ISI-5819): credential TYPE this gated skill consumes, from the S1
+    # binding-registry vocabulary (toolcred.BindingTypes). credentialSecretRef
+    # stays empty — the vault resolves annotation→binding→materialized Secret
+    # at admission (design ISI-5777 §3.1 Option A).
+    ksquad.io/credential-type: x-publish
 spec:
   source:
     type: inline

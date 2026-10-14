@@ -2,6 +2,14 @@ apiVersion: ksquad.io/v1alpha1
 kind: Skill
 metadata:
   name: image-gen
+  annotations:
+    # S6 (ISI-5819): credential TYPE(s) this gated skill consumes, from the S1
+    # binding-registry vocabulary (toolcred.BindingTypes). Comma-separated =
+    # ANY-OF: the skill drives EITHER provider (Gemini for editorial, fal.ai
+    # for photoreal), so the go-live gate is satisfied once EITHER is
+    # provisioned — not both. credentialSecretRef stays empty; the vault
+    # resolves annotation→binding→materialized Secret at admission (§3.1 Opt A).
+    ksquad.io/credential-type: gemini,fal.ai
 spec:
   source:
     type: inline
